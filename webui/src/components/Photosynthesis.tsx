@@ -1,91 +1,119 @@
-import { Card, ProgressBar, Label } from '@heroui/react'
-import { Sun, Sparkles } from 'lucide-react'
+import { ProgressBar, Label } from '@heroui/react'
+import { Sun, Zap, TrendingUp } from 'lucide-react'
 
 interface PhotosynthesisProps {
-  lightLevel: number // 0 to 2000 µmol/m²/s
+  lightLevel: number // 0–2000 µmol/m²/s
+}
+
+const getMetrics = (par: number) => {
+  if (par < 200)  return { efficiency: Math.round((par / 200) * 35), label: 'Insufficient Light', chip: 'neutral' as const }
+  if (par < 600)  return { efficiency: Math.round(35 + ((par - 200) / 400) * 40), label: 'Active — Moderate', chip: 'green' as const }
+  if (par <= 1200) return { efficiency: Math.min(98, Math.round(75 + ((par - 600) / 600) * 23)), label: 'Peak Rate — Optimal', chip: 'green' as const }
+  return { efficiency: Math.max(20, Math.round(98 - ((par - 1200) / 800) * 60)), label: 'Photo-stress Risk', chip: 'amber' as const }
+}
+
+const chipStyles = {
+  neutral: 'bg-[--color-md-surface-container-high] text-[--color-md-on-surface-variant]',
+  green:   'bg-[--color-md-primary-container] text-[--color-md-on-primary-container]',
+  amber:   'bg-[#FFF3CD] text-[#7A5200]',
+}
+
+// Radial "sun" PAR indicator
+const SunDial = ({ par, max = 2000 }: { par: number, max: number }) => {
+  const pct   = Math.min(par / max, 1)
+  const rays   = 12
+  const hue    = Math.round(50 - pct * 30) // golden-yellow → orange
+  const rInner = 18, rOuter = 28
+
+  return (
+    <svg viewBox="0 0 80 80" className="w-20 h-20">
+      {/* Ray spokes */}
+      {Array.from({ length: rays }).map((_, i) => {
+        const angle = (i / rays) * 360
+        const rad   = (angle * Math.PI) / 180
+        const active = i < Math.round(pct * rays)
+        const x1 = 40 + rInner * Math.cos(rad)
+        const y1 = 40 + rInner * Math.sin(rad)
+        const x2 = 40 + (active ? rOuter : rInner + 3) * Math.cos(rad)
+        const y2 = 40 + (active ? rOuter : rInner + 3) * Math.sin(rad)
+        return (
+          <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={active ? `hsl(${hue}, 90%, 52%)` : 'var(--color-md-outline-variant)'}
+            strokeWidth={active ? 2.5 : 1.5} strokeLinecap="round"
+            className="transition-all duration-500"
+          />
+        )
+      })}
+      {/* Core circle */}
+      <circle cx="40" cy="40" r="14"
+        fill={`hsl(${hue}, 85%, 58%)`} fillOpacity={0.15 + pct * 0.75}
+        className="transition-all duration-500"
+      />
+      <circle cx="40" cy="40" r="10"
+        fill={`hsl(${hue}, 90%, 50%)`} fillOpacity={0.25 + pct * 0.65}
+        className="transition-all duration-500"
+      />
+    </svg>
+  )
 }
 
 export const Photosynthesis = ({ lightLevel }: PhotosynthesisProps) => {
-  // Photosynthesis efficiency logic
-  // Typically, plants need 400-1000 µmol/m²/s for optimal photosynthesis.
-  // Below 200 is too dark, above 1500 can cause heat stress or photoinhibition.
-  let efficiency = 0;
-  let statusText = "Sub-optimal";
-  let statusColor = "text-rose-500";
-  let progressColor: "default" | "accent" | "success" | "warning" | "danger" = "warning";
-
-  if (lightLevel < 200) {
-    efficiency = Math.round((lightLevel / 200) * 40);
-    statusText = "Low Light (Inactive)";
-    statusColor = "text-slate-500";
-    progressColor = "default";
-  } else if (lightLevel >= 200 && lightLevel < 600) {
-    efficiency = Math.round(40 + ((lightLevel - 200) / 400) * 40);
-    statusText = "Active (Moderate)";
-    statusColor = "text-emerald-500";
-    progressColor = "success";
-  } else if (lightLevel >= 600 && lightLevel <= 1200) {
-    // Peak efficiency
-    efficiency = Math.round(80 + ((1200 - lightLevel) / 600) * 18);
-    statusText = "Optimal (Peak Rate)";
-    statusColor = "text-emerald-600 dark:text-emerald-400";
-    progressColor = "success";
-  } else {
-    // Dropping efficiency due to stress
-    efficiency = Math.max(10, Math.round(80 - ((lightLevel - 1200) / 800) * 60));
-    statusText = "Slight Photo-Stress";
-    statusColor = "text-amber-500";
-    progressColor = "warning";
-  }
+  const { efficiency, label, chip } = getMetrics(lightLevel)
+  const dli = ((lightLevel * 0.0864 * 12) / 100).toFixed(1)
 
   return (
-    <Card className="rounded-3xl border border-m3-outline bg-m3-surface-variant/40 p-4 shadow-sm hover:shadow-md transition-shadow duration-300">
-      <Card.Header className="flex flex-row items-center justify-between pb-2">
+    <div className="rounded-[28px] bg-[--color-md-surface-container-low] md-elevation-1 flex flex-col overflow-hidden transition-shadow duration-300 hover:md-elevation-2">
+      {/* Header */}
+      <div className="px-6 pt-6 pb-2 flex items-start justify-between">
         <div>
-          <Card.Title className="text-lg font-bold text-foreground">Photosynthesis</Card.Title>
-          <Card.Description className="text-xs text-muted">Light absorption metrics</Card.Description>
+          <p className="text-xs font-medium tracking-widest uppercase text-[--color-md-on-surface-variant] mb-1">
+            Photosynthesis
+          </p>
+          <h2 className="text-[22px] font-medium text-[--color-md-on-surface] leading-tight">
+            {lightLevel} <span className="text-sm font-normal text-[--color-md-on-surface-variant]">µmol/m²/s</span>
+          </h2>
+          <p className="text-sm text-[--color-md-on-surface-variant] mt-0.5">Active PAR reading</p>
         </div>
-        <div className="p-2 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-500 dark:text-amber-300">
-          <Sun className="size-5" />
+        <div className="w-12 h-12 rounded-2xl bg-[--color-md-tertiary-container] flex items-center justify-center shrink-0">
+          <Sun className="size-6 text-[--color-md-on-tertiary-container]" />
         </div>
-      </Card.Header>
+      </div>
 
-      <Card.Content className="flex flex-col gap-4 py-4">
-        {/* PAR display */}
-        <div className="flex flex-col items-center justify-center py-2 relative">
-          <span className="text-3xl font-extrabold text-foreground tracking-tight">
-            {lightLevel} <span className="text-sm font-normal text-muted">µmol/m²/s</span>
-          </span>
-          <span className="text-xs text-muted mt-1 uppercase tracking-wider font-semibold">Active PAR</span>
-          {lightLevel > 1000 && (
-            <Sparkles className="absolute top-1 right-8 size-4 text-amber-400 animate-bounce" />
-          )}
-        </div>
+      {/* Sun dial centred */}
+      <div className="flex justify-center py-2">
+        <SunDial par={lightLevel} max={2000} />
+      </div>
 
-        {/* Progress Bar showing efficiency */}
-        <ProgressBar aria-label="Photosynthesis Efficiency" color={progressColor} value={efficiency}>
-          <div className="flex justify-between w-full text-xs font-semibold text-muted mb-1">
-            <Label>Photosynthetic Efficiency</Label>
+      {/* Progress bar */}
+      <div className="px-6 pb-2">
+        <ProgressBar
+          aria-label="Photosynthetic efficiency"
+          value={efficiency}
+          color={chip === 'amber' ? 'warning' : chip === 'neutral' ? 'default' : 'success'}
+        >
+          <div className="flex justify-between text-[11px] text-[--color-md-on-surface-variant] mb-1.5">
+            <Label className="flex items-center gap-1">
+              <Zap className="size-3" /> Efficiency
+            </Label>
             <ProgressBar.Output />
           </div>
-          <ProgressBar.Track className="bg-slate-200 dark:bg-slate-800">
-            <ProgressBar.Fill />
+          <ProgressBar.Track className="bg-[--color-md-surface-container-highest] rounded-full h-2">
+            <ProgressBar.Fill className="rounded-full transition-all duration-700" />
           </ProgressBar.Track>
         </ProgressBar>
-      </Card.Content>
+      </div>
 
-      <Card.Footer className="flex flex-col gap-1 items-start mt-2 border-t border-m3-outline/30 pt-3">
-        <div className="flex w-full justify-between items-center text-sm">
-          <span className="text-muted">Rate:</span>
-          <span className={`font-semibold ${statusColor}`}>{statusText}</span>
+      {/* Footer */}
+      <div className="px-6 pb-4 mt-auto">
+        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${chipStyles[chip]}`}>
+          <TrendingUp className="size-3.5" />
+          {label}
         </div>
-        <div className="flex w-full justify-between items-center text-xs text-muted">
-          <span>Est. DLI:</span>
-          <span className="font-medium text-foreground">
-            {((lightLevel * 0.0864 * 12) / 100).toFixed(1)} mol/m²/d
-          </span>
+        <div className="mt-3 pt-3 border-t border-[--color-md-outline-variant] flex justify-between text-xs text-[--color-md-on-surface-variant]">
+          <span>Daily Light Integral</span>
+          <span className="font-medium text-[--color-md-on-surface]">{dli} mol/m²/d</span>
         </div>
-      </Card.Footer>
-    </Card>
+      </div>
+    </div>
   )
 }

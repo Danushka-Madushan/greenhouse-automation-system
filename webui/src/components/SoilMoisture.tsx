@@ -1,5 +1,4 @@
-import { Card } from '@heroui/react'
-import { Sprout } from 'lucide-react'
+import { Sprout, AlertTriangle, CheckCircle, Droplets } from 'lucide-react'
 
 interface SoilMoistureProps {
   sector1: number
@@ -8,81 +7,154 @@ interface SoilMoistureProps {
   sector4: number
 }
 
+const getSectorStyle = (v: number) => {
+  if (v < 30) return { bg: 'bg-[#F9DEDC]', text: 'text-[#8C1D18]', border: 'border-[#F2B8B5]', dot: 'bg-[#B3261E]' }
+  if (v > 80) return { bg: 'bg-[#D3E3FD]', text: 'text-[#041E49]', border: 'border-[#A8C7FA]', dot: 'bg-[#0B57D0]' }
+  return { bg: 'bg-[--color-md-primary-container]', text: 'text-[--color-md-on-primary-container]', border: 'border-[--color-md-outline-variant]', dot: 'bg-[--color-md-primary]' }
+}
+
+const getSectorFill = (v: number) => {
+  if (v < 30) return 'hsl(3,60%,55%)'
+  if (v > 80) return 'hsl(213,80%,45%)'
+  return 'hsl(155,52%,42%)'
+}
+
+const MiniBar = ({ value, label }: { value: number; label: string }) => {
+  const { bg, text, border, dot } = getSectorStyle(value)
+  return (
+    <div className={`flex flex-col items-center gap-1.5 p-2.5 rounded-2xl border ${bg} ${border}`}>
+      <div className="flex items-center gap-1">
+        <div className={`size-1.5 rounded-full ${dot}`} />
+        <span className={`text-[10px] font-semibold ${text}`}>{label}</span>
+      </div>
+      <div className="w-full h-1.5 rounded-full bg-white/40">
+        <div
+          className="h-full rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${value}%`, backgroundColor: getSectorFill(value) }}
+        />
+      </div>
+      <span className={`text-sm font-bold ${text}`}>{value}%</span>
+    </div>
+  )
+}
+
 export const SoilMoisture = ({ sector1, sector2, sector3, sector4 }: SoilMoistureProps) => {
-  const average = Math.round((sector1 + sector2 + sector3 + sector4) / 4);
+  const average = Math.round((sector1 + sector2 + sector3 + sector4) / 4)
+  const pct = average / 100
 
-  let statusText = "Optimal";
-  let statusColor = "text-emerald-600 dark:text-emerald-400";
-  
-  if (average < 30) {
-    statusText = "Dry - Irrigation Needed";
-    statusColor = "text-rose-500";
-  } else if (average > 80) {
-    statusText = "Over-saturated";
-    statusColor = "text-blue-500";
-  }
-
-  // Helper function to get color for a sector moisture level
-  const getSectorStyle = (moisture: number) => {
-    if (moisture < 30) {
-      return "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/30";
-    } else if (moisture > 80) {
-      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/30";
-    } else {
-      return "bg-emerald-50 text-emerald-800 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-300 dark:border-emerald-900/20";
-    }
-  }
+  const isDry = average < 30
+  const isWet = average > 80
+  const label = isDry ? 'Irrigation Needed' : isWet ? 'Over-saturated' : 'Optimal Moisture'
+  const chipStyle = isDry
+    ? 'bg-[#F9DEDC] text-[#8C1D18]'
+    : isWet
+    ? 'bg-[#D3E3FD] text-[#041E49]'
+    : 'bg-[--color-md-primary-container] text-[--color-md-on-primary-container]'
+  const Icon = isDry || isWet ? AlertTriangle : CheckCircle
 
   return (
-    <Card className="rounded-3xl border border-m3-outline bg-m3-surface-variant/40 p-4 shadow-sm hover:shadow-md transition-shadow duration-300">
-      <Card.Header className="flex flex-row items-center justify-between pb-2">
+    <div className="rounded-[28px] bg-[--color-md-surface-container-low] md-elevation-1 flex flex-col overflow-hidden transition-shadow duration-300 hover:md-elevation-2">
+      {/* Header */}
+      <div className="px-6 pt-6 pb-2 flex items-start justify-between">
         <div>
-          <Card.Title className="text-lg font-bold text-foreground">Soil Moisture</Card.Title>
-          <Card.Description className="text-xs text-muted">Averaged greenhouse rootzone</Card.Description>
+          <p className="text-xs font-medium tracking-widest uppercase text-[--color-md-on-surface-variant] mb-1">
+            Soil Moisture
+          </p>
+          <h2 className="text-[22px] font-medium text-[--color-md-on-surface] leading-tight">
+            {average}% <span className="text-sm font-normal text-[--color-md-on-surface-variant]">avg</span>
+          </h2>
+          <p className="text-sm text-[--color-md-on-surface-variant] mt-0.5">4-sector rootzone</p>
         </div>
-        <div className="p-2 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
-          <Sprout className="size-5" />
+        <div className="w-12 h-12 rounded-2xl bg-[--color-md-primary-container] flex items-center justify-center shrink-0">
+          <Sprout className="size-6 text-[--color-md-on-primary-container]" />
         </div>
-      </Card.Header>
+      </div>
 
-      <Card.Content className="flex flex-col gap-4 py-3">
-        {/* Average Display */}
-        <div className="flex flex-col items-center">
-          <span className="text-3xl font-extrabold text-foreground">{average}%</span>
-          <span className="text-[10px] text-muted uppercase tracking-wider font-semibold">Average Level</span>
-        </div>
+      {/* Half-circle average gauge */}
+      <div className="flex justify-center pt-1 pb-0">
+        <svg viewBox="0 0 120 64" className="w-36 h-16">
+          {(() => {
+            const r = 44, cx = 60, cy = 56
 
-        {/* 2x2 Sector Matrix */}
-        <div className="grid grid-cols-2 gap-2 mt-1">
-          <div className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 ${getSectorStyle(sector1)}`}>
-            <span className="text-[10px] font-semibold opacity-85">NW Sector 1</span>
-            <span className="text-sm font-bold mt-0.5">{sector1}%</span>
-          </div>
-          <div className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 ${getSectorStyle(sector2)}`}>
-            <span className="text-[10px] font-semibold opacity-85">NE Sector 2</span>
-            <span className="text-sm font-bold mt-0.5">{sector2}%</span>
-          </div>
-          <div className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 ${getSectorStyle(sector3)}`}>
-            <span className="text-[10px] font-semibold opacity-85">SW Sector 3</span>
-            <span className="text-sm font-bold mt-0.5">{sector3}%</span>
-          </div>
-          <div className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 ${getSectorStyle(sector4)}`}>
-            <span className="text-[10px] font-semibold opacity-85">SE Sector 4</span>
-            <span className="text-sm font-bold mt-0.5">{sector4}%</span>
-          </div>
-        </div>
-      </Card.Content>
+            const txLeft  = cx - r   // left end of track (180°)
+            const tyLeft  = cy
+            const txRight = cx + r   // right end of track (0°)
+            const tyRight = cy
 
-      <Card.Footer className="flex flex-col gap-1 items-start mt-2 border-t border-m3-outline/30 pt-3">
-        <div className="flex w-full justify-between items-center text-sm">
-          <span className="text-muted">Condition:</span>
-          <span className={`font-semibold ${statusColor}`}>{statusText}</span>
+            // Fill end: sweeps from 180° toward 0° as pct goes 0→1
+            const fillDeg = 180 - pct * 180
+            const fillRad = (fillDeg * Math.PI) / 180
+            const fxEnd = cx + r * Math.cos(fillRad)
+            const fyEnd = cy - r * Math.sin(fillRad)  // SVG Y is flipped
+
+            // The filled arc spans pct*180° — always ≤ 180°, so largeArc is always 0
+            const largeArc = 0
+
+            const needleR  = r - 10
+            const nxEnd    = cx + needleR * Math.cos(fillRad)
+            const nyEnd    = cy - needleR * Math.sin(fillRad)
+            const nxBase1  = cx + 2 * Math.cos(fillRad + Math.PI / 2)
+            const nyBase1  = cy - 2 * Math.sin(fillRad + Math.PI / 2)
+            const nxBase2  = cx + 2 * Math.cos(fillRad - Math.PI / 2)
+            const nyBase2  = cy - 2 * Math.sin(fillRad - Math.PI / 2)
+
+            return (
+              <>
+                {/* Track arc */}
+                <path
+                  d={`M ${txLeft} ${tyLeft} A ${r} ${r} 0 0 1 ${txRight} ${tyRight}`}
+                  fill="none"
+                  stroke="var(--color-md-surface-container-highest)"
+                  strokeWidth="9"
+                  strokeLinecap="round"
+                />
+                {/* Fill arc */}
+                {pct > 0 && (
+                  <path
+                    d={`M ${txLeft} ${tyLeft} A ${r} ${r} 0 ${largeArc} 1 ${fxEnd} ${fyEnd}`}
+                    fill="none"
+                    stroke={getSectorFill(average)}
+                    strokeWidth="9"
+                    strokeLinecap="round"
+                    className="transition-all duration-700 ease-out"
+                  />
+                )}
+                {/* Needle */}
+                <polygon
+                  points={`${nxEnd},${nyEnd} ${nxBase1},${nyBase1} ${nxBase2},${nyBase2}`}
+                  fill={getSectorFill(average)}
+                  className="transition-all duration-700 ease-out"
+                />
+                {/* Centre pivot */}
+                <circle cx={cx} cy={cy} r="4" fill="white" stroke={getSectorFill(average)} strokeWidth="1.5" />
+              </>
+            )
+          })()}
+        </svg>
+      </div>
+
+      {/* 2×2 sector matrix */}
+      <div className="px-5 pb-2 grid grid-cols-2 gap-2">
+        <MiniBar value={sector1} label="NW Sec 1" />
+        <MiniBar value={sector2} label="NE Sec 2" />
+        <MiniBar value={sector3} label="SW Sec 3" />
+        <MiniBar value={sector4} label="SE Sec 4" />
+      </div>
+
+      {/* Footer */}
+      <div className="px-6 pb-4 mt-auto">
+        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${chipStyle}`}>
+          <Icon className="size-3.5" />
+          {label}
         </div>
-        <div className="flex w-full justify-between items-center text-xs text-muted">
-          <span>Active Valves:</span>
-          <span className="font-medium text-foreground">{average < 30 ? "4 Open" : "All Closed"}</span>
+        <div className="mt-3 pt-3 border-t border-[--color-md-outline-variant] flex justify-between text-xs text-[--color-md-on-surface-variant]">
+          <span>Active Valves</span>
+          <span className="font-medium text-[--color-md-on-surface] flex items-center gap-1">
+            <Droplets className="size-3" />
+            {isDry ? '4 Open' : 'All Closed'}
+          </span>
         </div>
-      </Card.Footer>
-    </Card>
+      </div>
+    </div>
   )
 }

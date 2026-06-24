@@ -1,243 +1,270 @@
 import { useState } from 'react'
 import { Tabs } from '@heroui/react'
-import { LayoutDashboard, BarChart3, Settings, Cpu, ShieldCheck } from 'lucide-react'
-import { WaterTankLevel } from './components/WaterTankLevel'
-import { TempHumidity } from './components/TempHumidity'
-import { Photosynthesis } from './components/Photosynthesis'
-import { SoilMoisture } from './components/SoilMoisture'
-import { AnalyticsEmpty } from './components/AnalyticsEmpty'
+import { LayoutDashboard, BarChart3, Leaf, ShieldCheck, Settings2, ChevronDown, ChevronUp } from 'lucide-react'
+import { WaterTankLevel }  from './components/WaterTankLevel'
+import { TempHumidity }    from './components/TempHumidity'
+import { Photosynthesis }  from './components/Photosynthesis'
+import { SoilMoisture }    from './components/SoilMoisture'
+import { AnalyticsEmpty }  from './components/AnalyticsEmpty'
 
+/* ─── Simulator Slider ─────────────────────────── */
+interface SliderProps {
+  label: string
+  value: number
+  unit?: string
+  min: number
+  max: number
+  step?: number
+  accent: string
+  onChange: (v: number) => void
+}
+const SimSlider = ({ label, value, unit = '%', min, max, step = 1, accent, onChange }: SliderProps) => (
+  <div className="flex flex-col gap-2">
+    <div className="flex justify-between items-baseline">
+      <span className="text-xs font-medium text-[--color-md-on-surface-variant]">{label}</span>
+      <span className="text-xs font-bold" style={{ color: accent }}>{value}{unit}</span>
+    </div>
+    <div className="relative h-5 flex items-center">
+      {/* Track background */}
+      <div className="absolute w-full h-1 rounded-full bg-[--color-md-surface-container-highest]" />
+      {/* Active track */}
+      <div className="absolute h-1 rounded-full transition-all duration-150"
+        style={{ width: `${((value - min) / (max - min)) * 100}%`, backgroundColor: accent }} />
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        className="relative w-full opacity-0 cursor-pointer h-5 z-10"
+      />
+      {/* Thumb */}
+      <div className="absolute h-5 w-5 rounded-full border-2 border-white shadow-md pointer-events-none transition-all duration-150"
+        style={{
+          left: `calc(${((value - min) / (max - min)) * 100}% - 10px)`,
+          backgroundColor: accent
+        }}
+      />
+    </div>
+  </div>
+)
+
+/* ─── App ──────────────────────────────────────── */
 const App = () => {
-  // Sensor State
-  const [waterLevel, setWaterLevel] = useState<number>(68);
-  const [temperature, setTemperature] = useState<number>(24.5);
-  const [humidity, setHumidity] = useState<number>(62);
-  const [lightLevel, setLightLevel] = useState<number>(720);
-  const [soilSector1, setSoilSector1] = useState<number>(45);
-  const [soilSector2, setSoilSector2] = useState<number>(52);
-  const [soilSector3, setSoilSector3] = useState<number>(38);
-  const [soilSector4, setSoilSector4] = useState<number>(48);
-
-  const [showSimulator, setShowSimulator] = useState<boolean>(true);
+  const [waterLevel,  setWaterLevel]  = useState(68)
+  const [temperature, setTemperature] = useState(24.5)
+  const [humidity,    setHumidity]    = useState(62)
+  const [lightLevel,  setLightLevel]  = useState(720)
+  const [sector1, setSector1] = useState(45)
+  const [sector2, setSector2] = useState(52)
+  const [sector3, setSector3] = useState(38)
+  const [sector4, setSector4] = useState(48)
+  const [simOpen, setSimOpen] = useState(true)
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300 pb-16">
-      {/* Top App Bar (Material 3 style) */}
-      <header className="sticky top-0 z-40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-emerald-600 text-white shadow-sm flex items-center justify-center">
-              <Cpu className="size-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">GreenOS</h1>
-              <p className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase">Automation System</p>
-            </div>
-          </div>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-md-surface)', color: 'var(--color-md-on-surface)' }}>
 
-          {/* Quick status pill */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 text-xs font-semibold">
-            <ShieldCheck className="size-4" />
-            <span>Greenhouse Online</span>
+      {/* ── M3 Top App Bar ────────────────────────── */}
+      <header
+        className="sticky top-0 z-50 h-16 flex items-center px-4 sm:px-6 lg:px-8 gap-4"
+        style={{
+          backgroundColor: 'var(--color-md-surface-container-low)',
+          borderBottom: '1px solid var(--color-md-outline-variant)',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        {/* Brand */}
+        <div className="flex items-center gap-3 flex-1">
+          <div
+            className="w-10 h-10 rounded-2xl flex items-center justify-center"
+            style={{ backgroundColor: 'var(--color-md-primary)', color: 'var(--color-md-on-primary)' }}
+          >
+            <Leaf className="size-5" />
           </div>
+          <div className="flex flex-col leading-none">
+            <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-md-on-surface)', fontFamily: 'var(--font-display)' }}>
+              GreenOS
+            </span>
+            <span className="text-[10px] font-medium tracking-[0.12em] uppercase" style={{ color: 'var(--color-md-on-surface-variant)' }}>
+              Automation System
+            </span>
+          </div>
+        </div>
+
+        {/* Status indicator */}
+        <div
+          className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold"
+          style={{
+            backgroundColor: 'var(--color-md-primary-container)',
+            color: 'var(--color-md-on-primary-container)',
+          }}
+        >
+          <ShieldCheck className="size-4" />
+          <span>Greenhouse Online</span>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      {/* ── Main ──────────────────────────────────── */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20">
+
+        {/* M3 Navigation Tabs — secondary variant with custom styling */}
         <Tabs variant="secondary" defaultSelectedKey="dashboard" className="w-full flex flex-col">
-          <Tabs.ListContainer className="mb-6 flex justify-center">
-            <Tabs.List aria-label="Main Navigation" className="bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200/40 dark:border-slate-800/40">
-              <Tabs.Tab id="dashboard" className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium">
+
+          {/* Tab bar */}
+          <Tabs.ListContainer className="mb-8">
+            <Tabs.List
+              aria-label="Main Navigation"
+              className="inline-flex rounded-full p-1 gap-1"
+              style={{
+                backgroundColor: 'var(--color-md-surface-container)',
+                border: '1px solid var(--color-md-outline-variant)',
+              }}
+            >
+              {/* Dashboard tab */}
+              <Tabs.Tab
+                id="dashboard"
+                className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-colors duration-200
+                  data-[selected=true]:bg-[--color-md-secondary-container]
+                  data-[selected=true]:text-[--color-md-on-secondary-container]
+                  text-[--color-md-on-surface-variant]
+                  hover:bg-[--color-md-surface-container-high]"
+              >
                 <LayoutDashboard className="size-4" />
                 Dashboard
-                <Tabs.Indicator className="bg-emerald-600 dark:bg-emerald-400" />
+                <Tabs.Indicator className="hidden" />
               </Tabs.Tab>
-              <Tabs.Tab id="analytics" className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium">
+
+              {/* Analytics tab */}
+              <Tabs.Tab
+                id="analytics"
+                className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-colors duration-200
+                  data-[selected=true]:bg-[--color-md-secondary-container]
+                  data-[selected=true]:text-[--color-md-on-secondary-container]
+                  text-[--color-md-on-surface-variant]
+                  hover:bg-[--color-md-surface-container-high]"
+              >
                 <BarChart3 className="size-4" />
                 Analytics
-                <Tabs.Indicator className="bg-emerald-600 dark:bg-emerald-400" />
+                <Tabs.Indicator className="hidden" />
               </Tabs.Tab>
             </Tabs.List>
           </Tabs.ListContainer>
 
-          {/* DASHBOARD TAB */}
-          <Tabs.Panel id="dashboard" className="w-full flex flex-col gap-8">
-            {/* Grid of Metric Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* ── Dashboard Panel ─────────────────── */}
+          <Tabs.Panel id="dashboard" className="flex flex-col gap-8">
+
+            {/* Page headline — M3 Headline Large */}
+            <div>
+              <h1
+                className="text-[32px] font-medium leading-tight mb-1"
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-md-on-surface)' }}
+              >
+                Dashboard
+              </h1>
+              <p className="text-sm" style={{ color: 'var(--color-md-on-surface-variant)' }}>
+                Real-time greenhouse environment overview
+              </p>
+            </div>
+
+            {/* ── Metric Cards ─────────────────── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
               <WaterTankLevel level={waterLevel} />
               <TempHumidity temperature={temperature} humidity={humidity} />
               <Photosynthesis lightLevel={lightLevel} />
-              <SoilMoisture 
-                sector1={soilSector1} 
-                sector2={soilSector2} 
-                sector3={soilSector3} 
-                sector4={soilSector4} 
-              />
+              <SoilMoisture sector1={sector1} sector2={sector2} sector3={sector3} sector4={sector4} />
             </div>
 
-            {/* Calibration Panel */}
-            <div className="border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <Settings className="size-5 text-emerald-600 dark:text-emerald-400 animate-spin" style={{ animationDuration: '6s' }} />
+            {/* ── Simulator Panel (M3 Card) ─────── */}
+            <div
+              className="rounded-[28px] overflow-hidden md-elevation-1"
+              style={{ backgroundColor: 'var(--color-md-surface-container-low)' }}
+            >
+              {/* Panel header */}
+              <button
+                onClick={() => setSimOpen(v => !v)}
+                className="w-full flex items-center justify-between px-6 py-5 text-left
+                  hover:brightness-95 transition-all duration-200 md-state-layer"
+                style={{ borderBottom: simOpen ? '1px solid var(--color-md-outline-variant)' : 'none' }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                    style={{ backgroundColor: 'var(--color-md-surface-container-highest)' }}
+                  >
+                    <Settings2
+                      className="size-5"
+                      style={{ color: 'var(--color-md-on-surface-variant)' }}
+                    />
+                  </div>
                   <div>
-                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Sensor Calibration Panel</h2>
-                    <p className="text-xs text-slate-500">Modify values to simulate environmental changes</p>
+                    <p className="text-base font-semibold" style={{ color: 'var(--color-md-on-surface)' }}>
+                      Sensor Simulator
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--color-md-on-surface-variant)' }}>
+                      Adjust values to simulate environmental conditions
+                    </p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setShowSimulator(!showSimulator)}
-                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors"
-                >
-                  {showSimulator ? "Collapse Simulator" : "Expand Simulator"}
-                </button>
-              </div>
+                {simOpen
+                  ? <ChevronUp className="size-5" style={{ color: 'var(--color-md-on-surface-variant)' }} />
+                  : <ChevronDown className="size-5" style={{ color: 'var(--color-md-on-surface-variant)' }} />
+                }
+              </button>
 
-              {showSimulator && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Water tank slider */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 flex justify-between">
-                      <span>Simulate Water Level</span>
-                      <span className="text-blue-600 dark:text-blue-400">{waterLevel}%</span>
-                    </label>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="100" 
-                      value={waterLevel} 
-                      onChange={(e) => setWaterLevel(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
+              {/* Slider grid */}
+              {simOpen && (
+                <div className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+
+                  {/* Water */}
+                  <div className="flex flex-col gap-5">
+                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--color-md-on-surface-variant)' }}>
+                      Water Tank
+                    </p>
+                    <SimSlider label="Water Level" value={waterLevel} min={0} max={100}
+                      accent="var(--color-md-secondary)" onChange={setWaterLevel} />
                   </div>
 
-                  {/* Temp / Humidity sliders */}
+                  {/* Climate */}
+                  <div className="flex flex-col gap-5">
+                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--color-md-on-surface-variant)' }}>
+                      Climate
+                    </p>
+                    <SimSlider label="Temperature" value={temperature} unit="°C" min={10} max={45} step={0.5}
+                      accent="var(--color-md-error)" onChange={setTemperature} />
+                    <SimSlider label="Humidity" value={humidity} min={20} max={100}
+                      accent="var(--color-md-secondary)" onChange={setHumidity} />
+                  </div>
+
+                  {/* Light */}
+                  <div className="flex flex-col gap-5">
+                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--color-md-on-surface-variant)' }}>
+                      Light (PAR)
+                    </p>
+                    <SimSlider label="Sunlight Intensity" value={lightLevel} unit=" µmol" min={0} max={2000} step={10}
+                      accent="var(--color-md-tertiary)" onChange={setLightLevel} />
+                  </div>
+
+                  {/* Soil sectors */}
                   <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                      <label className="text-xs font-bold text-slate-600 dark:text-slate-400 flex justify-between">
-                        <span>Simulate Temperature</span>
-                        <span className="text-rose-500">{temperature}°C</span>
-                      </label>
-                      <input 
-                        type="range" 
-                        min="10" 
-                        max="45" 
-                        step="0.5"
-                        value={temperature} 
-                        onChange={(e) => setTemperature(Number(e.target.value))}
-                        className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-rose-500"
-                      />
-                    </div>
-                    
-                    <div className="flex flex-col gap-2">
-                      <label className="text-xs font-bold text-slate-600 dark:text-slate-400 flex justify-between">
-                        <span>Simulate Humidity</span>
-                        <span className="text-cyan-500">{humidity}%</span>
-                      </label>
-                      <input 
-                        type="range" 
-                        min="20" 
-                        max="100" 
-                        value={humidity} 
-                        onChange={(e) => setHumidity(Number(e.target.value))}
-                        className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                      />
-                    </div>
+                    <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--color-md-on-surface-variant)' }}>
+                      Soil Moisture
+                    </p>
+                    <SimSlider label="NW Sector 1" value={sector1} min={10} max={95}
+                      accent="var(--color-md-primary)" onChange={setSector1} />
+                    <SimSlider label="NE Sector 2" value={sector2} min={10} max={95}
+                      accent="var(--color-md-primary)" onChange={setSector2} />
+                    <SimSlider label="SW Sector 3" value={sector3} min={10} max={95}
+                      accent="var(--color-md-primary)" onChange={setSector3} />
+                    <SimSlider label="SE Sector 4" value={sector4} min={10} max={95}
+                      accent="var(--color-md-primary)" onChange={setSector4} />
                   </div>
 
-                  {/* Light Level slider */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 flex justify-between">
-                      <span>Simulate Sunlight (PAR)</span>
-                      <span className="text-amber-500">{lightLevel} µmol</span>
-                    </label>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="2000" 
-                      step="10"
-                      value={lightLevel} 
-                      onChange={(e) => setLightLevel(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                    />
-                  </div>
-
-                  {/* Soil Moisture Sector sliders */}
-                  <div className="flex flex-col gap-3">
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Simulate Soil Moisture</span>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-slate-500 flex justify-between">
-                          <span>NW Sec 1</span>
-                          <span>{soilSector1}%</span>
-                        </label>
-                        <input 
-                          type="range" 
-                          min="10" 
-                          max="95" 
-                          value={soilSector1} 
-                          onChange={(e) => setSoilSector1(Number(e.target.value))}
-                          className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-                        />
-                      </div>
-                      
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-slate-500 flex justify-between">
-                          <span>NE Sec 2</span>
-                          <span>{soilSector2}%</span>
-                        </label>
-                        <input 
-                          type="range" 
-                          min="10" 
-                          max="95" 
-                          value={soilSector2} 
-                          onChange={(e) => setSoilSector2(Number(e.target.value))}
-                          className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-slate-500 flex justify-between">
-                          <span>SW Sec 3</span>
-                          <span>{soilSector3}%</span>
-                        </label>
-                        <input 
-                          type="range" 
-                          min="10" 
-                          max="95" 
-                          value={soilSector3} 
-                          onChange={(e) => setSoilSector3(Number(e.target.value))}
-                          className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-slate-500 flex justify-between">
-                          <span>SE Sec 4</span>
-                          <span>{soilSector4}%</span>
-                        </label>
-                        <input 
-                          type="range" 
-                          min="10" 
-                          max="95" 
-                          value={soilSector4} 
-                          onChange={(e) => setSoilSector4(Number(e.target.value))}
-                          className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-                        />
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
           </Tabs.Panel>
 
-          {/* ANALYTICS TAB */}
-          <Tabs.Panel id="analytics" className="w-full">
+          {/* ── Analytics Panel ──────────────────── */}
+          <Tabs.Panel id="analytics">
             <AnalyticsEmpty />
           </Tabs.Panel>
+
         </Tabs>
       </main>
     </div>

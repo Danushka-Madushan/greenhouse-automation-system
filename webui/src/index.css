@@ -1,15 +1,89 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500;700&family=Google+Sans+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap');
 @import "tailwindcss";
 @import "@heroui/styles";
 
 @theme {
-  --font-sans: 'Outfit', sans-serif;
-  --color-m3-surface: oklch(0.98 0.01 240);
-  --color-m3-surface-variant: oklch(0.95 0.015 240);
-  --color-m3-primary: oklch(0.35 0.12 145);
-  --color-m3-primary-container: oklch(0.92 0.05 145);
-  --color-m3-on-primary-container: oklch(0.15 0.08 145);
-  --color-m3-secondary-container: oklch(0.90 0.03 240);
-  --color-m3-on-secondary-container: oklch(0.20 0.03 240);
-  --color-m3-outline: oklch(0.85 0.01 240);
+  /* M3 Typography — Google Sans + Roboto */
+  --font-sans: 'Google Sans', 'Roboto', system-ui, sans-serif;
+  --font-display: 'Google Sans Display', 'Google Sans', sans-serif;
+
+  /* M3 Primary palette — Teal-Green seed */
+  --color-md-primary:            oklch(0.39 0.13 160);
+  --color-md-on-primary:         oklch(1.00 0.00 0);
+  --color-md-primary-container:  oklch(0.88 0.07 155);
+  --color-md-on-primary-container: oklch(0.18 0.08 155);
+
+  /* M3 Secondary */
+  --color-md-secondary:          oklch(47.778% 0.11639 243.886);
+  --color-md-on-secondary:       oklch(1.00 0.00 0);
+  --color-md-secondary-container: oklch(0.90 0.03 188);
+  --color-md-on-secondary-container: oklch(0.18 0.04 188);
+
+  /* M3 Tertiary — Warm amber accent */
+  --color-md-tertiary:           oklch(0.48 0.12 55);
+  --color-md-on-tertiary:        oklch(1.00 0.00 0);
+  --color-md-tertiary-container: oklch(0.93 0.06 55);
+  --color-md-on-tertiary-container: oklch(0.22 0.08 55);
+
+  /* M3 Error */
+  --color-md-error:              oklch(0.53 0.21 25);
+  --color-md-on-error:           oklch(1.00 0.00 0);
+  --color-md-error-container:    oklch(0.92 0.08 25);
+  --color-md-on-error-container: oklch(0.25 0.12 25);
+
+  /* M3 Surface tones */
+  --color-md-surface:            oklch(0.985 0.005 170);
+  --color-md-surface-dim:        oklch(0.93 0.008 170);
+  --color-md-surface-bright:     oklch(1.00 0.00 0);
+  --color-md-surface-container-lowest: oklch(1.00 0.00 0);
+  --color-md-surface-container-low: oklch(0.97 0.005 170);
+  --color-md-surface-container:  oklch(0.95 0.008 170);
+  --color-md-surface-container-high: oklch(0.93 0.010 170);
+  --color-md-surface-container-highest: oklch(0.90 0.012 170);
+  --color-md-on-surface:         oklch(0.17 0.02 170);
+  --color-md-on-surface-variant: oklch(0.40 0.03 170);
+  --color-md-outline:            oklch(0.60 0.02 170);
+  --color-md-outline-variant:    oklch(0.82 0.015 170);
+
+  /* M3 Elevation tonal overlay helpers */
+  --color-md-scrim:              oklch(0.00 0.00 0);
+  --color-md-inverse-surface:    oklch(0.28 0.02 170);
+  --color-md-inverse-on-surface: oklch(0.93 0.008 170);
+  --color-md-inverse-primary:    oklch(0.78 0.10 160);
+}
+
+/* ─── Global base ───────────────────────────────── */
+html {
+  background-color: var(--color-md-surface);
+  color: var(--color-md-on-surface);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ─── M3 State layer mixin ──────────────────────── */
+.md-state-layer {
+  @apply relative overflow-hidden;
+}
+.md-state-layer::after {
+  content: '';
+  @apply absolute inset-0 opacity-0 transition-opacity duration-200 pointer-events-none;
+  background-color: var(--color-md-on-surface);
+}
+.md-state-layer:hover::after  { opacity: 0.08; }
+.md-state-layer:focus::after  { opacity: 0.12; }
+.md-state-layer:active::after { opacity: 0.16; }
+
+/* ─── M3 elevation shadows ──────────────────────── */
+.md-elevation-1 { box-shadow: 0 1px 2px 0 rgba(0,0,0,.30), 0 1px 3px 1px rgba(0,0,0,.15); }
+.md-elevation-2 { box-shadow: 0 1px 2px 0 rgba(0,0,0,.30), 0 2px 6px 2px rgba(0,0,0,.15); }
+.md-elevation-3 { box-shadow: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px 0 rgba(0,0,0,.30); }
+
+/* ─── Custom scrollbar ──────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-md-outline-variant);
+  border-radius: 4px;
 }
