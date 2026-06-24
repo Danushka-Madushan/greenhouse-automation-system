@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "@heroui/styles";
+
+@theme {
+  --font-sans: 'Outfit', sans-serif;
+  --color-m3-surface: oklch(0.98 0.01 240);
+  --color-m3-surface-variant: oklch(0.95 0.015 240);
+  --color-m3-primary: oklch(0.35 0.12 145);
+  --color-m3-primary-container: oklch(0.92 0.05 145);
+  --color-m3-on-primary-container: oklch(0.15 0.08 145);
+  --color-m3-secondary-container: oklch(0.90 0.03 240);
+  --color-m3-on-secondary-container: oklch(0.20 0.03 240);
+  --color-m3-outline: oklch(0.85 0.01 240);
+}
