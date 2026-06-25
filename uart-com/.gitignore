@@ -1,0 +1,83 @@
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.csproj.lscache
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bsearch/
+graphed/
+Obj/
+obj/
+Generated%20Files/
+[Bb]in/
+[Mm]odules/
+_ReSharper*/
+*.[Cc]runch*.xml
+*.[Mm]emory*.json
+*.nib
+*.log
+
+## Visual Studio cache and settings
+.vs/
+# Un-comment the next line if you want to check in the user-specific WebPublish profiles
+#*.[Ww]eb[Pp]ublish.xml.user
+
+## VS Code directories and files
+.vscode/
+!.vscode/extensions.json
+.factorypath
+
+## JetBrains Rider / IntelliJ
+.idea/
+*.sln.iml
+
+## Published output
+__pycache__/
+.archived/
+publish/
+_PublishedWebsites/
+
+## Package management
+packages/
+!packages/repositories.config
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+clippy.json
+
+## Node.js / Frontend (for ASP.NET Core SPA templates)
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+## Server-side & Hosting environments
+.env
+.env.development.local
+.env.local
+
+## Operating System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+## Testing and Code Coverage
+/*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+TestResults/
+*.axaml.g.h
