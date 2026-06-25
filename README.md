@@ -8,7 +8,7 @@
 
 [![Platform](https://img.shields.io/badge/Platform-Arduino%20Uno%20R3-00979D?logo=arduino&logoColor=white)](https://www.arduino.cc/)
 [![Backend](https://img.shields.io/badge/Backend-.NET%2010-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-3945ed?logo=react&logoColor=black)](https://react.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Institution](https://img.shields.io/badge/NIBM-HND--SE%20%7C%20Batch%2026.1F-blue)](https://www.nibm.lk/)
 
