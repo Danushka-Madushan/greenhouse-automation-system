@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "uart-com"
+		},
+		{
+			"path": "webui"
+		},
+		{
+			"name": "arduino",
+			"path": "arduino"
+		}
+	],
+	"settings": {}
+}

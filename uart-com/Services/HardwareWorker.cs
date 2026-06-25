@@ -1,0 +1,152 @@
+using System.IO.Ports;
+
+namespace uart_com.Services;
+
+public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
+{
+    private readonly ILogger<HardwareWorker> _logger = logger;
+    private SerialPort? _serialPort;
+    private bool _isConnected = false;
+
+    /* Handshake Constants */
+    private const string HandshakeRequest = "SYS:WHOAMI\n";
+    private const string HandshakeResponse = "SYS:GREENHOUSE_UNO";
+    /* Baud Rate */
+    private const int BaudRate = 9600;
+
+  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Hardware Worker started. Waiting for Microcontroller...");
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            if (!_isConnected || _serialPort == null || !_serialPort.IsOpen)
+            {
+                _isConnected = await TryDiscoverArduinoAsync(stoppingToken);
+
+                if (!_isConnected)
+                {
+                    /* If no Arduino is found, wait 5 seconds before scanning again to save CPU */
+                    await Task.Delay(5000, stoppingToken);
+                    continue;
+                }
+            }
+
+            /* We are connected. Enter the main listening loop. */
+            try
+            {
+                await ReadDataLoopAsync(stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Connection lost or disrupted: {ex.Message}. Restarting discovery...");
+                _isConnected = false;
+                _serialPort?.Dispose();
+            }
+        }
+    }
+
+    private async Task<bool> TryDiscoverArduinoAsync(CancellationToken stoppingToken)
+    {
+        string[] ports = SerialPort.GetPortNames();
+
+        if (ports.Length == 0)
+        {
+            _logger.LogDebug("No COM ports detected on this machine.");
+            return false;
+        }
+
+        foreach (string port in ports)
+        {
+            if (stoppingToken.IsCancellationRequested) return false;
+
+            _logger.LogInformation($"Pinging port {port}...");
+
+            try
+            {
+                var testPort = new SerialPort(port, BaudRate)
+                {
+                    /* Timeout Settings */
+                    ReadTimeout = 2000,
+                    WriteTimeout = 1000,
+                    NewLine = "\n"
+                };
+
+                testPort.Open();
+
+                /* Clear any leftover junk data in the buffer before sending our ping */
+                testPort.DiscardInBuffer();
+                
+                testPort.Write(HandshakeRequest);
+
+                /* Give the Arduino a brief moment to process and reply */
+                await Task.Delay(100, stoppingToken); 
+
+                string response = testPort.ReadLine().Trim();
+
+                if (response.Contains(HandshakeResponse))
+                {
+                    _logger.LogInformation($"SUCCESS! Greenhouse Arduino locked on {port}.");
+                    _serialPort = testPort; 
+                    return true; 
+                }
+                else
+                {
+                    _logger.LogDebug($"Port {port} responded with unknown data: {response}");
+                    testPort.Close();
+                }
+            }
+            catch (TimeoutException)
+            {
+                _logger.LogDebug($"Port {port} timed out. Not our device.");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                _logger.LogDebug($"Port {port} is currently locked by another application.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug($"Error testing port {port}: {ex.Message}");
+            }
+        }
+
+        return false;
+    }
+
+    private async Task ReadDataLoopAsync(CancellationToken stoppingToken)
+    {
+        /* Increase timeout for standard operations. If the Arduino is quiet for 5 seconds, 
+         * it throws a controlled timeout, allowing us to check for app shutdown requests.
+         */
+        _serialPort!.ReadTimeout = 5000; 
+
+        while (!stoppingToken.IsCancellationRequested && _serialPort.IsOpen)
+        {
+            try
+            {
+                string line = _serialPort.ReadLine().Trim();
+                
+                if (!string.IsNullOrEmpty(line))
+                {
+                    _logger.LogInformation($"[ARDUINO TX] {line}");
+                    
+                    /* Future Integration Point: */
+                    /* 1. Parse line (e.g., "STATUS:MOISTURE:24") */
+                    /* 2. Fire internal event to SignalR Hub */
+                }
+            }
+            catch (TimeoutException)
+            {
+                /* This is normal. The Arduino just hasn't sent data recently. */
+                /* We briefly yield the thread, then loop again. */
+                await Task.Delay(10, stoppingToken);
+            }
+        }
+    }
+
+    public override void Dispose()
+    {
+        _serialPort?.Dispose();
+        base.Dispose();
+    }
+}
