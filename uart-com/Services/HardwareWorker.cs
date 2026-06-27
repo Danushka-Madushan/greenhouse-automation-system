@@ -1,4 +1,5 @@
 using System.IO.Ports;
+using uart_com.Constants;
 
 namespace uart_com.Services;
 
@@ -8,9 +9,6 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
     private SerialPort? _serialPort;
     private bool _isConnected = false;
 
-    /* Handshake Constants */
-    private const string HandshakeRequest = "SYS:WHOAMI\n";
-    private const string HandshakeResponse = "SYS:GREENHOUSE_UNO";
     /* Baud Rate */
     private const int BaudRate = 9600;
 
@@ -42,6 +40,7 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
                 _logger.LogWarning($"Connection lost or disrupted: {ex.Message}. Restarting discovery...");
                 _isConnected = false;
                 _serialPort?.Dispose();
+                _serialPort = null;
             }
         }
     }
@@ -62,39 +61,50 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
 
             _logger.LogInformation($"Pinging port {port}...");
 
+            SerialPort? testPort = null;
+            bool claimedPort = false;
+
             try
             {
-                var testPort = new SerialPort(port, BaudRate)
+                testPort = new SerialPort(port, BaudRate)
                 {
-                    /* Timeout Settings */
-                    ReadTimeout = 2000,
+                    ReadTimeout  = 2000,
                     WriteTimeout = 1000,
-                    NewLine = "\n"
+                    NewLine      = "\n"
                 };
 
                 testPort.Open();
 
-                /* Clear any leftover junk data in the buffer before sending our ping */
+                /* On the Arduino Uno, SerialPort.Open() pulses the DTR pin, which is
+                 * wired to the Uno's hardware reset line. This triggers a full board
+                 * reset — the bootloader runs for ~1-2 seconds before the sketch starts.
+                 * Sending WHOAMI before the sketch is ready means it lands in the
+                 * bootloader, which ignores it entirely.
+                 * We wait here to let the bootloader finish and the sketch take over.
+                 */
+                await Task.Delay(2000, stoppingToken);
+
+                /* Discard AFTER the boot wait — the bootloader may have emitted
+                 * data during reset that would otherwise corrupt our handshake read.
+                 */
                 testPort.DiscardInBuffer();
 
-                testPort.Write(HandshakeRequest);
+                testPort.Write(GreenOS.Events.Emit.WHOAMI);
 
-                /* Give the Arduino a brief moment to process and reply */
+                /* Give the sketch a brief moment to process and form its reply */
                 await Task.Delay(100, stoppingToken);
 
                 string response = testPort.ReadLine().Trim();
 
-                if (response.Contains(HandshakeResponse))
+                if (response.Contains(GreenOS.Events.Incoming.GREENHOUSE_UNO))
                 {
                     _logger.LogInformation($"SUCCESS! Greenhouse Arduino locked on {port}.");
                     _serialPort = testPort;
+                    claimedPort = true;
                     return true;
                 }
-                else
-                {
-                    _logger.LogDebug($"Port {port} responded with unknown data: {response}");
-                    testPort.Close();
-                }
+
+                _logger.LogDebug($"Port {port} responded with unknown data: {response}");
             }
             catch (TimeoutException)
             {
@@ -107,6 +117,18 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogDebug($"Error testing port {port}: {ex.Message}");
+            }
+            finally
+            {
+                /* Always release ports we aren't keeping, regardless of which
+                 * path above exited. Previously, TimeoutException and the wrong-
+                 * response branch both left testPort open and undisposed.
+                 */
+                if (!claimedPort)
+                {
+                    testPort?.Close();
+                    testPort?.Dispose();
+                }
             }
         }
 
