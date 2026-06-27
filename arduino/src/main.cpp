@@ -1,15 +1,23 @@
 #include <Arduino.h>
+#include "greenOS.hpp"
 
-void setup() {
+using namespace GreenOS;
+
+/*  Declare a global pointer initialized to nullptr for EventHandler */
+EventHandler *handler = nullptr;
+
+void setup()
+{
   Serial.begin(9600);
+  /* Instantiate the EventHandler safely now, when the Serial is ready */
+  handler = new EventHandler(&Serial);
 }
 
-void loop() {
-  if (Serial.available() > 0) {
-    String incoming = Serial.readStringUntil('\n');
-    
-    if (incoming == "SYS:WHOAMI") {
-      Serial.println("SYS:GREENHOUSE_UNO");
-    }
+void loop()
+{
+  if (handler != nullptr)
+  {
+    /* Handle Incomming Events */
+    handler->onReceive();
   }
 }
