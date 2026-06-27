@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Tabs } from '@heroui/react'
 import { LayoutDashboard, BarChart3, Leaf, ShieldCheck, Settings2, ChevronDown, ChevronUp } from 'lucide-react'
-import { WaterTankLevel }  from './components/WaterTankLevel'
-import { TempHumidity }    from './components/TempHumidity'
-import { Photosynthesis }  from './components/Photosynthesis'
-import { SoilMoisture }    from './components/SoilMoisture'
-import { AnalyticsEmpty }  from './components/AnalyticsEmpty'
+import { WaterTankLevel } from './components/WaterTankLevel'
+import { TempHumidity } from './components/TempHumidity'
+import { Photosynthesis } from './components/Photosynthesis'
+import { SoilMoisture } from './components/SoilMoisture'
+import { AnalyticsEmpty } from './components/AnalyticsEmpty'
+import { signalRService } from './services/signalr'
 
 /* ─── Simulator Slider ─────────────────────────── */
 interface SliderProps {
@@ -47,19 +48,42 @@ const SimSlider = ({ label, value, unit = '%', min, max, step = 1, accent, onCha
 
 /* ─── App ──────────────────────────────────────── */
 const App = () => {
-  const [waterLevel,  setWaterLevel]  = useState(68)
+  const [waterLevel, setWaterLevel] = useState(68)
   const [temperature, setTemperature] = useState(24.5)
-  const [humidity,    setHumidity]    = useState(62)
-  const [lightLevel,  setLightLevel]  = useState(720)
+  const [humidity, setHumidity] = useState(62)
+  const [lightLevel, setLightLevel] = useState(720)
   const [sector1, setSector1] = useState(45)
   const [sector2, setSector2] = useState(52)
   const [sector3, setSector3] = useState(38)
   const [sector4, setSector4] = useState(48)
   const [simOpen, setSimOpen] = useState(true)
+  const [status, setStatus] = useState<string>("Waiting for data...");
+
+  useEffect(() => {
+    // 1. Start the connection when the dashboard loads
+    signalRService.startConnection();
+
+    // 2. Listen for sensor updates coming FROM C#
+    signalRService.connection.on("OnSensorUpdate", (data: string) => {
+      console.log("Received data from C#:", data);
+      setStatus(data); // e.g., updates the UI with "STATUS:MOISTURE_SENSOR:24"
+    });
+
+    // 3. Listen for C# acknowledging our commands
+    signalRService.connection.on("CommandAcknowledged", (msg: string) => {
+      console.log(msg);
+    });
+
+    // Cleanup listener when component unmounts
+    return () => {
+      signalRService.connection.off("OnSensorUpdate");
+      signalRService.connection.off("CommandAcknowledged");
+    };
+  }, []);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-md-surface)', color: 'var(--color-md-on-surface)' }}>
-
+      
       {/* ── M3 Top App Bar ────────────────────────── */}
       <header
         className="sticky top-0 z-50 h-16 flex items-center px-4 sm:px-6 lg:px-8 gap-4"
@@ -82,7 +106,7 @@ const App = () => {
               GreenOS
             </span>
             <span className="text-[10px] font-medium tracking-[0.12em] uppercase" style={{ color: 'var(--color-md-on-surface-variant)' }}>
-              Automation System
+              Automation System {status}
             </span>
           </div>
         </div>
