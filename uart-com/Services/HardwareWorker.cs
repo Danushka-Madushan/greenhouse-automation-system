@@ -137,10 +137,18 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
 
     private async Task ReadDataLoopAsync(CancellationToken stoppingToken)
     {
-        /* Increase timeout for standard operations. If the Arduino is quiet for 5 seconds, 
+        /* Increase timeout for standard operations. If the Arduino is quiet for 5 seconds,
          * it throws a controlled timeout, allowing us to check for app shutdown requests.
          */
         _serialPort!.ReadTimeout = 5000;
+
+        /* ReadLine() is a synchronous blocking call — it has no knowledge of CancellationToken.
+         * Without this registration, Ctrl+C fires but ReadLine() holds the thread for up to
+         * the full ReadTimeout (5 s) before the while-loop condition can even be evaluated.
+         * Closing the port immediately unblocks ReadLine(), which throws IOException — caught
+         * below and converted into a clean break.
+         */
+        using var shutdownRegistration = stoppingToken.Register(() => _serialPort?.Close());
 
         while (!stoppingToken.IsCancellationRequested && _serialPort.IsOpen)
         {
@@ -159,9 +167,22 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
             }
             catch (TimeoutException)
             {
-                /* This is normal. The Arduino just hasn't sent data recently. */
-                /* We briefly yield the thread, then loop again. */
+                /* Normal — the Arduino just hasn't sent data recently.
+                 * Yield briefly, then loop to re-check the cancellation token.
+                 */
                 await Task.Delay(10, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                /* stoppingToken was cancelled during Task.Delay above — exit cleanly. */
+                break;
+            }
+            catch (IOException) when (stoppingToken.IsCancellationRequested)
+            {
+                /* The shutdown registration closed the port, unblocking ReadLine().
+                 * This is an intentional teardown, not a real connection failure.
+                 */
+                break;
             }
         }
     }
