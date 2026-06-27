@@ -6,31 +6,30 @@ interface PhotosynthesisProps {
 }
 
 const getMetrics = (par: number) => {
-  if (par < 200)  return { efficiency: Math.round((par / 200) * 35), label: 'Insufficient Light', chip: 'neutral' as const }
-  if (par < 600)  return { efficiency: Math.round(35 + ((par - 200) / 400) * 40), label: 'Active — Moderate', chip: 'green' as const }
+  if (par < 200) return { efficiency: Math.round((par / 200) * 35), label: 'Insufficient Light', chip: 'neutral' as const }
+  if (par < 600) return { efficiency: Math.round(35 + ((par - 200) / 400) * 40), label: 'Active — Moderate', chip: 'green' as const }
   if (par <= 1200) return { efficiency: Math.min(98, Math.round(75 + ((par - 600) / 600) * 23)), label: 'Peak Rate — Optimal', chip: 'green' as const }
   return { efficiency: Math.max(20, Math.round(98 - ((par - 1200) / 800) * 60)), label: 'Photo-stress Risk', chip: 'amber' as const }
 }
 
 const chipStyles = {
   neutral: 'bg-[--color-md-surface-container-high] text-[--color-md-on-surface-variant]',
-  green:   'bg-[--color-md-primary-container] text-[--color-md-on-primary-container]',
-  amber:   'bg-[#FFF3CD] text-[#7A5200]',
+  green: 'bg-[--color-md-primary-container] text-[--color-md-on-primary-container]',
+  amber: 'bg-[--color-md-tertiary-container] text-[--color-md-on-tertiary-container]',
 }
 
-// Radial "sun" PAR indicator
-const SunDial = ({ par, max = 2000 }: { par: number, max: number }) => {
-  const pct   = Math.min(par / max, 1)
-  const rays   = 12
-  const hue    = Math.round(50 - pct * 30) // golden-yellow → orange
+// Radial "sun" PAR indicator — fluid via viewBox + width:100%
+const SunDial = ({ par, max = 2000 }: { par: number; max: number }) => {
+  const pct = Math.min(par / max, 1)
+  const rays = 12
+  const hue = Math.round(50 - pct * 30) // golden-yellow → warm-orange
   const rInner = 18, rOuter = 28
 
   return (
-    <svg viewBox="0 0 80 80" className="w-20 h-20">
-      {/* Ray spokes */}
+    <svg viewBox="0 0 80 80" style={{ width: '100%', maxWidth: '96px', height: 'auto' }}>
       {Array.from({ length: rays }).map((_, i) => {
         const angle = (i / rays) * 360
-        const rad   = (angle * Math.PI) / 180
+        const rad = (angle * Math.PI) / 180
         const active = i < Math.round(pct * rays)
         const x1 = 40 + rInner * Math.cos(rad)
         const y1 = 40 + rInner * Math.sin(rad)
@@ -38,19 +37,19 @@ const SunDial = ({ par, max = 2000 }: { par: number, max: number }) => {
         const y2 = 40 + (active ? rOuter : rInner + 3) * Math.sin(rad)
         return (
           <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-            stroke={active ? `hsl(${hue}, 90%, 52%)` : 'var(--color-md-outline-variant)'}
+            stroke={active ? `hsl(${hue}, 88%, 50%)` : 'var(--color-md-outline-variant)'}
             strokeWidth={active ? 2.5 : 1.5} strokeLinecap="round"
             className="transition-all duration-500"
           />
         )
       })}
-      {/* Core circle */}
+      {/* Core circles */}
       <circle cx="40" cy="40" r="14"
-        fill={`hsl(${hue}, 85%, 58%)`} fillOpacity={0.15 + pct * 0.75}
+        fill={`hsl(${hue}, 85%, 58%)`} fillOpacity={0.15 + pct * 0.70}
         className="transition-all duration-500"
       />
       <circle cx="40" cy="40" r="10"
-        fill={`hsl(${hue}, 90%, 50%)`} fillOpacity={0.25 + pct * 0.65}
+        fill={`hsl(${hue}, 90%, 50%)`} fillOpacity={0.25 + pct * 0.60}
         className="transition-all duration-500"
       />
     </svg>
@@ -63,29 +62,30 @@ export const Photosynthesis = ({ lightLevel }: PhotosynthesisProps) => {
 
   return (
     <div className="rounded-[28px] bg-[--color-md-surface-container-low] md-elevation-1 flex flex-col overflow-hidden transition-shadow duration-300 hover:md-elevation-2">
+
       {/* Header */}
-      <div className="px-6 pt-6 pb-2 flex items-start justify-between">
-        <div>
+      <div className="px-5 pt-5 pb-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
           <p className="text-xs font-medium tracking-widest uppercase text-[--color-md-on-surface-variant] mb-1">
             Photosynthesis
           </p>
-          <h2 className="text-[22px] font-medium text-[--color-md-on-surface] leading-tight">
-            {lightLevel} <span className="text-sm font-normal text-[--color-md-on-surface-variant]">µmol/m²/s</span>
+          <h2 className="text-[20px] font-medium text-[--color-md-on-surface] leading-tight">
+            {lightLevel} <span className="text-xs font-normal text-[--color-md-on-surface-variant]">µmol/m²/s</span>
           </h2>
-          <p className="text-sm text-[--color-md-on-surface-variant] mt-0.5">Active PAR reading</p>
+          <p className="text-xs text-[--color-md-on-surface-variant] mt-0.5">Active PAR reading</p>
         </div>
-        <div className="w-12 h-12 rounded-2xl bg-[--color-md-tertiary-container] flex items-center justify-center shrink-0">
-          <Sun className="size-6 text-[--color-md-on-tertiary-container]" />
+        <div className="w-11 h-11 rounded-2xl bg-[--color-md-tertiary-container] flex items-center justify-center shrink-0">
+          <Sun className="size-5 text-[--color-md-on-tertiary-container]" />
         </div>
       </div>
 
-      {/* Sun dial centred */}
-      <div className="flex justify-center py-2">
+      {/* Sun dial — fluid, capped at 96px so it doesn't balloon on wide cards */}
+      <div className="flex justify-center px-6 py-2">
         <SunDial par={lightLevel} max={2000} />
       </div>
 
       {/* Progress bar */}
-      <div className="px-6 pb-2">
+      <div className="px-5 pb-2">
         <ProgressBar
           aria-label="Photosynthetic efficiency"
           value={efficiency}
@@ -104,10 +104,10 @@ export const Photosynthesis = ({ lightLevel }: PhotosynthesisProps) => {
       </div>
 
       {/* Footer */}
-      <div className="px-6 pb-4 mt-auto">
+      <div className="px-5 pb-4 mt-auto">
         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${chipStyles[chip]}`}>
-          <TrendingUp className="size-3.5" />
-          {label}
+          <TrendingUp className="size-3.5 shrink-0" />
+          <span className="truncate">{label}</span>
         </div>
         <div className="mt-3 pt-3 border-t border-[--color-md-outline-variant] flex justify-between text-xs text-[--color-md-on-surface-variant]">
           <span>Daily Light Integral</span>

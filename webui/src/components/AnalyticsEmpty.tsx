@@ -9,7 +9,7 @@ export const AnalyticsEmpty = () => (
 
     {/* M3 Headline + Body */}
     <h2 className="text-[28px] font-medium text-[--color-md-on-surface] text-center mb-3 max-w-sm leading-snug"
-        style={{ fontFamily: 'var(--font-display)' }}>
+      style={{ fontFamily: 'var(--font-display)' }}>
       Analytics Coming Soon
     </h2>
     <p className="text-base text-[--color-md-on-surface-variant] text-center max-w-sm leading-relaxed mb-8">

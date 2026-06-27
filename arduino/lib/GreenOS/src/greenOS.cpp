@@ -6,23 +6,24 @@ using namespace GreenOS;
 
 EventHandler::EventHandler(HardwareSerial *serial) : serial(serial) {}
 
-void EventHandler::onReceive()
+void EventHandler::onReceive(String &incoming)
 {
-  if (serial->available() > 0)
+  /* System Check Event */
+  if (incoming == Events::Incoming::WHOAMI)
   {
-    String incoming = serial->readStringUntil('\n');
-    incoming.trim();
-
-    /**
-     * Arduino strings can check equality against PROGMEM pointers
-     * safely using the built-in flash string helper wrapper
-     * __FlashStringHelper is used to reduce RAM usage by storing
-     * constant strings in flash memory instead of SRAM
-     */
-    /* System Check Event */
-    if (incoming == (const __FlashStringHelper *)Events::Incoming::WHOAMI)
-    {
-      serial->println((const __FlashStringHelper *)Events::Emit::GREENHOUSE_UNO);
-    }
+    serial->println(Events::Emit::GREENHOUSE_UNO);
   }
+}
+
+void EventHandler::emitTemperatureHumidity(float temperature, float humidity)
+{
+  String data = String(temperature, 1) + "," + String(humidity, 1);
+  String event = String(Events::Emit::TEMP_HUMIDITY_DATA_DYN) + data;
+  serial->println(event);
+}
+
+void EventHandler::emitDH22Error(const String &errorMessage)
+{
+  String event = String(Events::Emit::ERROR_DH22_MSG_DYN) + errorMessage;
+  serial->println(event);
 }

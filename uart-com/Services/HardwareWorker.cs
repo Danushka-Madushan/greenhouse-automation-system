@@ -1,11 +1,19 @@
 using System.IO.Ports;
+using Microsoft.AspNetCore.SignalR;
 using uart_com.Constants;
+using uart_com.Hubs;
 
 namespace uart_com.Services;
 
-public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
+public class HardwareWorker(
+    ILogger<HardwareWorker> logger,
+    IHubContext<SignalIR> hubContext,
+    GreenhouseState greenhouseState
+    ) : BackgroundService
 {
     private readonly ILogger<HardwareWorker> _logger = logger;
+    private readonly IHubContext<SignalIR> _hubContext = hubContext;
+    private readonly GreenhouseState _greenhouseState = greenhouseState;
     private SerialPort? _serialPort;
     private bool _isConnected = false;
 
@@ -20,6 +28,12 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
         {
             if (!_isConnected || _serialPort == null || !_serialPort.IsOpen)
             {
+                if (_greenhouseState.IsBoardOnline)
+                {
+                    _greenhouseState.IsBoardOnline = false;
+                    await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.SYS_OFFLINE, cancellationToken: stoppingToken);
+                }
+
                 _isConnected = await TryDiscoverArduinoAsync(stoppingToken);
 
                 if (!_isConnected)
@@ -33,12 +47,22 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
             /* We are connected. Enter the main listening loop. */
             try
             {
+                _greenhouseState.IsBoardOnline = true;
+                await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.SYS_ONLINE, cancellationToken: stoppingToken);
+                
                 await ReadDataLoopAsync(stoppingToken);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning($"Connection lost or disrupted: {ex.Message}. Restarting discovery...");
                 _isConnected = false;
+
+                if (_greenhouseState.IsBoardOnline)
+                {
+                    _greenhouseState.IsBoardOnline = false;
+                    await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.SYS_OFFLINE, cancellationToken: stoppingToken);
+                }
+
                 _serialPort?.Dispose();
                 _serialPort = null;
             }
@@ -68,9 +92,9 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
             {
                 testPort = new SerialPort(port, BaudRate)
                 {
-                    ReadTimeout  = 2000,
+                    ReadTimeout = 2000,
                     WriteTimeout = 1000,
-                    NewLine      = "\n"
+                    NewLine = "\n"
                 };
 
                 testPort.Open();

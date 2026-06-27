@@ -1,46 +1,90 @@
+import { useEffect, useRef, useState } from 'react'
 import { Droplet, AlertTriangle, CheckCircle } from 'lucide-react'
 
 interface WaterTankLevelProps {
-  level: number // 0–100
+  level: number
+  capacity: number
 }
 
-export const WaterTankLevel = ({ level }: WaterTankLevelProps) => {
-  const capacity = 2000
-  const currentVolume = Math.round((level / 100) * capacity)
+/** Ease-out cubic: decelerates as it reaches target */
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3)
+}
 
-  const isLow      = level < 20
-  const isNearFull = level > 90
+export const WaterTankLevel = ({ level, capacity }: WaterTankLevelProps) => {
+  /* Separate "displayed" level that animates smoothly toward the target `level` */
+  const [displayLevel, setDisplayLevel] = useState(level)
+  const animRef = useRef<number | null>(null)
+  const startRef = useRef<number | null>(null)
+  const fromRef = useRef(level)
+  const DURATION = 600 // ms
+
+  useEffect(() => {
+    // Cancel any ongoing animation
+    if (animRef.current !== null) cancelAnimationFrame(animRef.current)
+
+    const from = displayLevel
+    fromRef.current = from
+    startRef.current = null
+
+    const step = (timestamp: number) => {
+      if (startRef.current === null) startRef.current = timestamp
+      const elapsed = timestamp - startRef.current
+      const progress = Math.min(elapsed / DURATION, 1)
+      const eased = easeOutCubic(progress)
+      const next = from + (level - from) * eased
+      setDisplayLevel(next)
+
+      if (progress < 1) {
+        animRef.current = requestAnimationFrame(step)
+      } else {
+        setDisplayLevel(level) // snap to exact target
+        animRef.current = null
+      }
+    }
+
+    animRef.current = requestAnimationFrame(step)
+    return () => { if (animRef.current !== null) cancelAnimationFrame(animRef.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level])
+
+  // Use rounded displayLevel for geometry, raw for text
+  const d = displayLevel
+  const currentVolume = Math.round((d / 100) * capacity)
+
+  const isLow = d < 20
+  const isNearFull = d > 90
 
   const waterColors = isLow
     ? { top: '#72A8C8', bot: '#1A4060' }
     : isNearFull
-    ? { top: '#7DD4F8', bot: '#1053A0' }
-    : { top: '#4AABF0', bot: '#0C44A0' }
+      ? { top: '#7DD4F8', bot: '#1053A0' }
+      : { top: '#4AABF0', bot: '#0C44A0' }
 
   const statusConfig = isLow
     ? { label: 'Low Level', icon: AlertTriangle, bg: 'bg-[#F9DEDC]', text: 'text-[#8C1D18]' }
     : isNearFull
-    ? { label: 'Nearly Full', icon: CheckCircle,  bg: 'bg-[#C3EFAD]', text: 'text-[#1A3A0C]' }
-    : { label: 'Optimal',     icon: CheckCircle,  bg: 'bg-[#C3EFAD]', text: 'text-[#1A3A0C]' }
+      ? { label: 'Nearly Full', icon: CheckCircle, bg: 'bg-[#C3EFAD]', text: 'text-[#1A3A0C]' }
+      : { label: 'Optimal', icon: CheckCircle, bg: 'bg-[#C3EFAD]', text: 'text-[#1A3A0C]' }
 
   const StatusIcon = statusConfig.icon
 
   // Tank geometry inside SVG coordinate space
   const tX = 14, tY = 18, tW = 92, tH = 170
-  const waterH  = Math.max(0, Math.round((level / 100) * tH))
-  const waveY   = tY + tH - waterH   // top of water surface
+  const waterH = Math.max(0, (d / 100) * tH)
+  const waveY = tY + tH - waterH   // top of water surface
 
   // Generates a double-wide sinusoidal wave path for seamless CSS loop
   const period = 28
-  const amp    = 3.5
+  const amp = 3.5
   const buildWave = (y: number): string => {
     const totalW = tW * 2 + period
-    let d = `M ${tX} ${y}`
+    let path = `M ${tX} ${y}`
     for (let x = 0; x <= totalW; x += period) {
       const x0 = tX + x
-      d += ` C ${x0 + period * 0.25},${y - amp} ${x0 + period * 0.75},${y + amp} ${x0 + period},${y}`
+      path += ` C ${x0 + period * 0.25},${y - amp} ${x0 + period * 0.75},${y + amp} ${x0 + period},${y}`
     }
-    return d + ` V ${tY + tH} H ${tX} Z`
+    return path + ` V ${tY + tH} H ${tX} Z`
   }
 
   // Bubble y-positions near the tank floor (bubbles rise upward via animation)
@@ -56,49 +100,44 @@ export const WaterTankLevel = ({ level }: WaterTankLevelProps) => {
     <div className="rounded-[28px] bg-[--color-md-surface-container-low] md-elevation-1 flex flex-col overflow-hidden transition-shadow duration-300 hover:md-elevation-2">
 
       {/* ── Header ── */}
-      <div className="px-6 pt-6 pb-4 flex items-start justify-between">
-        <div>
+      <div className="px-5 pt-5 pb-3 flex items-start justify-between gap-2">
+        <div className="min-w-0">
           <p className="text-xs font-medium tracking-widest uppercase text-[--color-md-on-surface-variant] mb-1">
             Water Tank
           </p>
-          <h2 className="text-[22px] font-medium text-[--color-md-on-surface] leading-tight">
-            {level}% Full
+          <h2 className="text-[20px] font-medium text-[--color-md-on-surface] leading-tight">
+            {Math.round(d)}% Full
           </h2>
-          <p className="text-sm text-[--color-md-on-surface-variant] mt-0.5">
+          <p className="text-xs text-[--color-md-on-surface-variant] mt-0.5">
             {currentVolume.toLocaleString()} / {capacity.toLocaleString()} L
           </p>
         </div>
-        <div className="w-12 h-12 rounded-2xl bg-[--color-md-secondary-container] flex items-center justify-center shrink-0">
-          <Droplet className="size-6 text-[--color-md-on-secondary-container]" />
+        <div className="w-11 h-11 rounded-2xl bg-[--color-md-secondary-container] flex items-center justify-center shrink-0">
+          <Droplet className="size-5 text-[--color-md-on-secondary-container]" />
         </div>
       </div>
 
       {/* ── Tank SVG ── */}
       <div className="flex justify-center px-6 py-2">
-        {/*
-          viewBox 0 0 148 220:
-            tX=14 tW=92 → right edge=106; tick labels reach ~140; right pad=8
-            tY=18 tH=170 → water bottom=188; pipe nub below +14; bottom pad=18
-        */}
         <svg viewBox="0 0 148 220" className="w-37 h-55">
           <defs>
             {/* Water depth gradient */}
             <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor={waterColors.top} stopOpacity="0.92" />
-              <stop offset="100%" stopColor={waterColors.bot} stopOpacity="1"    />
+              <stop offset="0%" stopColor={waterColors.top} stopOpacity="0.92" />
+              <stop offset="100%" stopColor={waterColors.bot} stopOpacity="1" />
             </linearGradient>
 
             {/* Glass sheen — left-to-right fade */}
             <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stopColor="white" stopOpacity="0.22" />
-              <stop offset="50%"  stopColor="white" stopOpacity="0.05" />
-              <stop offset="100%" stopColor="white" stopOpacity="0"    />
+              <stop offset="0%" stopColor="white" stopOpacity="0.22" />
+              <stop offset="50%" stopColor="white" stopOpacity="0.05" />
+              <stop offset="100%" stopColor="white" stopOpacity="0" />
             </linearGradient>
 
             {/* Empty tank body */}
             <linearGradient id="emptyBg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor="var(--color-md-surface-container-high)" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="var(--color-md-surface-container)"      stopOpacity="0.6" />
+              <stop offset="0%" stopColor="var(--color-md-surface-container-high)" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="var(--color-md-surface-container)" stopOpacity="0.6" />
             </linearGradient>
 
             {/* Clips */}
@@ -149,7 +188,7 @@ export const WaterTankLevel = ({ level }: WaterTankLevelProps) => {
 
           {/* ── Dashed ruler lines at 25 / 50 / 75 % ── */}
           {[25, 50, 75].map(pct => {
-            const y       = tY + tH - Math.round((pct / 100) * tH)
+            const y = tY + tH - Math.round((pct / 100) * tH)
             const inWater = y >= waveY
             return (
               <g key={pct}>
@@ -179,7 +218,7 @@ export const WaterTankLevel = ({ level }: WaterTankLevelProps) => {
           })}
 
           {/* ── Animated water fill ── */}
-          {level > 0 && (
+          {d > 0 && (
             <g clipPath="url(#tc)">
               <g className="wave-inner">
                 <path d={buildWave(waveY)} fill="url(#wg)" />
@@ -188,7 +227,7 @@ export const WaterTankLevel = ({ level }: WaterTankLevelProps) => {
           )}
 
           {/* ── Rising bubbles (clipped to tank, fade out before reaching surface) ── */}
-          {level > 14 && (
+          {d > 14 && (
             <g clipPath="url(#tc)">
               {bubbles.map(b => (
                 <circle key={b.cls} className={b.cls}
@@ -222,7 +261,7 @@ export const WaterTankLevel = ({ level }: WaterTankLevelProps) => {
             fill="var(--color-md-outline-variant)" fillOpacity="0.45" />
 
           {/* ── Percentage label inside water ── */}
-          {level > 12 && (
+          {d > 12 && (
             <text
               x={tX + tW / 2}
               y={Math.max(waveY + 17, tY + 22)}
@@ -230,17 +269,17 @@ export const WaterTankLevel = ({ level }: WaterTankLevelProps) => {
               fontSize="13" fontWeight="600" fontFamily="system-ui,sans-serif"
               fill="white" fillOpacity="0.72"
             >
-              {level}%
+              {Math.round(d)}%
             </text>
           )}
         </svg>
       </div>
 
       {/* ── Status chip + footer ── */}
-      <div className="px-6 pb-4 mt-auto">
+      <div className="px-5 pb-4 mt-auto">
         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
-          <StatusIcon className="size-3.5" />
-          {statusConfig.label}
+          <StatusIcon className="size-3.5 shrink-0" />
+          <span className="truncate">{statusConfig.label}</span>
         </div>
         <div className="mt-3 pt-3 border-t border-[--color-md-outline-variant] flex justify-between text-xs text-[--color-md-on-surface-variant]">
           <span>Flow rate</span>

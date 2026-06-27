@@ -14,7 +14,6 @@ namespace GreenOS
     {
       /* System Check Event */
       const char* const WHOAMI PROGMEM = "SYS:WHOAMI";
-      const char* const OFF_PUMP PROGMEM = "CMD:OFF_PUMP";
     }
 
     /* Outgoing Events */
@@ -22,7 +21,10 @@ namespace GreenOS
     {
       /* System Check Response */
       const char* const GREENHOUSE_UNO PROGMEM = "SYS:GREENHOUSE_UNO";
-      const char* const MOISTURE_DATA_DYN PROGMEM = "STATUS:MOISTURE_SENSOR:";
+      /* Temperature and Humidity Data */
+      const char* const TEMP_HUMIDITY_DATA_DYN PROGMEM = "STATUS:TEMP_HUMIDITY:";
+      /* Error */
+      const char* const ERROR_DH22_MSG_DYN PROGMEM = "ERR:SENSOR_DH22:";
     }
   }
 }
