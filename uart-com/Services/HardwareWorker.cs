@@ -14,7 +14,7 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
     /* Baud Rate */
     private const int BaudRate = 9600;
 
-  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Hardware Worker started. Waiting for Microcontroller...");
 
@@ -76,19 +76,19 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
 
                 /* Clear any leftover junk data in the buffer before sending our ping */
                 testPort.DiscardInBuffer();
-                
+
                 testPort.Write(HandshakeRequest);
 
                 /* Give the Arduino a brief moment to process and reply */
-                await Task.Delay(100, stoppingToken); 
+                await Task.Delay(100, stoppingToken);
 
                 string response = testPort.ReadLine().Trim();
 
                 if (response.Contains(HandshakeResponse))
                 {
                     _logger.LogInformation($"SUCCESS! Greenhouse Arduino locked on {port}.");
-                    _serialPort = testPort; 
-                    return true; 
+                    _serialPort = testPort;
+                    return true;
                 }
                 else
                 {
@@ -118,18 +118,18 @@ public class HardwareWorker(ILogger<HardwareWorker> logger) : BackgroundService
         /* Increase timeout for standard operations. If the Arduino is quiet for 5 seconds, 
          * it throws a controlled timeout, allowing us to check for app shutdown requests.
          */
-        _serialPort!.ReadTimeout = 5000; 
+        _serialPort!.ReadTimeout = 5000;
 
         while (!stoppingToken.IsCancellationRequested && _serialPort.IsOpen)
         {
             try
             {
                 string line = _serialPort.ReadLine().Trim();
-                
+
                 if (!string.IsNullOrEmpty(line))
                 {
                     _logger.LogInformation($"[ARDUINO TX] {line}");
-                    
+
                     /* Future Integration Point: */
                     /* 1. Parse line (e.g., "STATUS:MOISTURE:24") */
                     /* 2. Fire internal event to SignalR Hub */
