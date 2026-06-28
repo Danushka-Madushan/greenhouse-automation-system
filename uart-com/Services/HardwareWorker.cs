@@ -31,7 +31,7 @@ public class HardwareWorker(
                 if (_greenhouseState.IsBoardOnline)
                 {
                     _greenhouseState.IsBoardOnline = false;
-                    await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.SYS_OFFLINE, cancellationToken: stoppingToken);
+                    await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.SYS_OFFLINE, cancellationToken: stoppingToken);
                 }
 
                 _isConnected = await TryDiscoverArduinoAsync(stoppingToken);
@@ -48,7 +48,7 @@ public class HardwareWorker(
             try
             {
                 _greenhouseState.IsBoardOnline = true;
-                await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.SYS_ONLINE, cancellationToken: stoppingToken);
+                await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.SYS_ONLINE, cancellationToken: stoppingToken);
                 
                 await ReadDataLoopAsync(stoppingToken);
             }
@@ -60,7 +60,7 @@ public class HardwareWorker(
                 if (_greenhouseState.IsBoardOnline)
                 {
                     _greenhouseState.IsBoardOnline = false;
-                    await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.SYS_OFFLINE, cancellationToken: stoppingToken);
+                    await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.SYS_OFFLINE, cancellationToken: stoppingToken);
                 }
 
                 _serialPort?.Dispose();
@@ -113,14 +113,14 @@ public class HardwareWorker(
                  */
                 testPort.DiscardInBuffer();
 
-                testPort.Write(GreenOS.Events.Emit.WHOAMI);
+                testPort.Write(GreenOS.Events.Emit.Ardiono.WHOAMI);
 
                 /* Give the sketch a brief moment to process and form its reply */
                 await Task.Delay(100, stoppingToken);
 
                 string response = testPort.ReadLine().Trim();
 
-                if (response.Contains(GreenOS.Events.Incoming.GREENHOUSE_UNO))
+                if (response.Contains(GreenOS.Events.Incoming.Ardiono.GREENHOUSE_UNO))
                 {
                     _logger.LogInformation($"SUCCESS! Greenhouse Arduino locked on {port}.");
                     _serialPort = testPort;
@@ -182,7 +182,19 @@ public class HardwareWorker(
 
                 if (!string.IsNullOrEmpty(line))
                 {
-                    _logger.LogInformation($"[ARDUINO TX] {line}");
+                    _logger.LogInformation($"[{DateTime.Now:HH:mm:ss}] [ARDUINO TX] {line}");
+
+                    if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.TEMP_HUMIDITY_DATA_DYN))
+                    {
+                        /* Example: "STATUS:TEMP_HUMIDITY:24.5,60.2" */
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_TEMP_HUMIDITY, line, cancellationToken: stoppingToken);
+                    }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.ERROR_DHT22_MSG_DYN))
+                    {
+                        /* Example: "ERR:SENSOR_DH22:READ_FAIL" */
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.TEMP_HUMIDITY_ERROR, line, cancellationToken: stoppingToken);
+                    }
+                    
 
                     /* Future Integration Point: */
                     /* 1. Parse line (e.g., "STATUS:MOISTURE:24") */
