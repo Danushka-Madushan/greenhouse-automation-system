@@ -1,4 +1,3 @@
-import { ProgressBar, Label } from '@heroui/react'
 import { Sun, Zap, TrendingUp } from 'lucide-react'
 
 interface PhotosynthesisProps {
@@ -7,8 +6,8 @@ interface PhotosynthesisProps {
 
 const getMetrics = (par: number) => {
   if (par < 200) return { efficiency: Math.round((par / 200) * 35), label: 'Insufficient Light', chip: 'neutral' as const }
-  if (par < 600) return { efficiency: Math.round(35 + ((par - 200) / 400) * 40), label: 'Active — Moderate', chip: 'green' as const }
-  if (par <= 1200) return { efficiency: Math.min(98, Math.round(75 + ((par - 600) / 600) * 23)), label: 'Peak Rate — Optimal', chip: 'green' as const }
+  if (par < 600) return { efficiency: Math.round(35 + ((par - 200) / 400) * 40), label: 'Active - Moderate', chip: 'green' as const }
+  if (par <= 1200) return { efficiency: Math.min(98, Math.round(75 + ((par - 600) / 600) * 23)), label: 'Peak Rate - Optimal', chip: 'green' as const }
   return { efficiency: Math.max(20, Math.round(98 - ((par - 1200) / 800) * 60)), label: 'Photo-stress Risk', chip: 'amber' as const }
 }
 
@@ -18,15 +17,46 @@ const chipStyles = {
   amber: 'bg-[--color-md-tertiary-container] text-[--color-md-on-tertiary-container]',
 }
 
+const ringColor = {
+  neutral: 'var(--color-md-outline)',
+  green: 'var(--color-md-primary)',
+  amber: 'var(--color-md-tertiary)',
+}
+
 // Radial "sun" PAR indicator — fluid via viewBox + width:100%
-const SunDial = ({ par, max = 2000 }: { par: number; max: number }) => {
+const SunDial = ({ par, max = 2000, efficiency, chip }: { par: number; max: number; efficiency: number; chip: 'neutral' | 'green' | 'amber' }) => {
   const pct = Math.min(par / max, 1)
   const rays = 12
   const hue = Math.round(50 - pct * 30) // golden-yellow → warm-orange
   const rInner = 18, rOuter = 28
 
+  // Radial efficiency ring outside the rays
+  const ringR = 35
+  const circumference = 2 * Math.PI * ringR
+  const dashOffset = circumference * (1 - efficiency / 100)
+
   return (
-    <svg viewBox="0 0 80 80" style={{ width: '100%', maxWidth: '96px', height: 'auto' }}>
+    <svg viewBox="0 0 80 80" style={{ width: '100%', maxWidth: '128px', height: 'auto' }}>
+      {/* Track ring */}
+      <circle
+        cx="40" cy="40" r={ringR}
+        fill="none"
+        stroke="var(--color-md-surface-container-highest)"
+        strokeWidth="3"
+      />
+      {/* Efficiency progress ring */}
+      <circle
+        cx="40" cy="40" r={ringR}
+        fill="none"
+        stroke={ringColor[chip]}
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={dashOffset}
+        transform="rotate(-90 40 40)"
+        className="transition-all duration-700"
+      />
+
       {Array.from({ length: rays }).map((_, i) => {
         const angle = (i / rays) * 360
         const rad = (angle * Math.PI) / 180
@@ -79,28 +109,21 @@ export const Photosynthesis = ({ lightLevel }: PhotosynthesisProps) => {
         </div>
       </div>
 
-      {/* Sun dial — fluid, capped at 96px so it doesn't balloon on wide cards */}
+      {/* Sun dial — fluid, capped at 128px, with radial efficiency ring */}
       <div className="flex justify-center px-6 py-2">
-        <SunDial par={lightLevel} max={2000} />
+        <SunDial par={lightLevel} max={2000} efficiency={efficiency} chip={chip} />
       </div>
 
-      {/* Progress bar */}
-      <div className="px-5 pb-2">
-        <ProgressBar
-          aria-label="Photosynthetic efficiency"
-          value={efficiency}
-          color={chip === 'amber' ? 'warning' : chip === 'neutral' ? 'default' : 'success'}
-        >
-          <div className="flex justify-between text-[11px] text-[--color-md-on-surface-variant] mb-1.5">
-            <Label className="flex items-center gap-1">
-              <Zap className="size-3" /> Efficiency
-            </Label>
-            <ProgressBar.Output />
-          </div>
-          <ProgressBar.Track className="bg-[--color-md-surface-container-highest] rounded-full h-2">
-            <ProgressBar.Fill className="rounded-full transition-all duration-700" />
-          </ProgressBar.Track>
-        </ProgressBar>
+      {/* Efficiency percentage — replaces linear progress bar */}
+      <div className="px-5 pb-3 flex flex-col items-center gap-0.5">
+        <div className="flex items-baseline gap-1">
+          <span className="text-[40px] font-bold leading-none text-[--color-md-on-surface]">{efficiency}</span>
+          <span className="text-lg font-medium text-[--color-md-on-surface-variant]">%</span>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-[--color-md-on-surface-variant]">
+          <Zap className="size-3" />
+          <span>Photosynthetic Efficiency</span>
+        </div>
       </div>
 
       {/* Footer */}
