@@ -33,8 +33,8 @@ public class SignalIR(ILogger<SignalIR> logger, GreenhouseState greenhouseState)
 
     // As soon as a client connects, instantly inform them if the system is online or offline
     string initialStatusEvent = _greenhouseState.IsBoardOnline
-        ? GreenOS.Events.Emit.SYS_ONLINE
-        : GreenOS.Events.Emit.SYS_OFFLINE;
+        ? GreenOS.Events.Emit.WebUI.SYS_ONLINE
+        : GreenOS.Events.Emit.WebUI.SYS_OFFLINE;
 
     await Clients.Caller.SendAsync(initialStatusEvent);
 
