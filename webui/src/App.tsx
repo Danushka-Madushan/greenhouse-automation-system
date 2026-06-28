@@ -4,11 +4,11 @@ import {
   Settings2, SlidersHorizontal,
   X
 } from 'lucide-react'
-import { WaterTankLevel } from './components/WaterTankLevel'
-import { TempHumidity } from './components/TempHumidity'
-import { Photosynthesis } from './components/Photosynthesis'
-import { SoilMoisture } from './components/SoilMoisture'
-import { AnalyticsEmpty } from './components/AnalyticsEmpty'
+import { WaterTankLevel } from './components/sensors/WaterTankLevel'
+import { TempHumidity } from './components/sensors/TempHumidity'
+import { Photosynthesis } from './components/sensors/Photosynthesis'
+import { SoilMoisture } from './components/sensors/SoilMoisture'
+import { AnalyticsEmpty } from './components/sensors/AnalyticsEmpty'
 import { SettingsModal } from './components/SettingsModal'
 import { signalRService } from './services/signalr'
 import { Parser } from './utils/parser'
