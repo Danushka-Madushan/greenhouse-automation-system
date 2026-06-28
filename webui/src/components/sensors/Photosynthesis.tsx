@@ -36,7 +36,7 @@ const SunDial = ({ par, max = 2000, efficiency, chip }: { par: number; max: numb
   const dashOffset = circumference * (1 - efficiency / 100)
 
   return (
-    <svg viewBox="0 0 80 80" style={{ width: '100%', maxWidth: '128px', height: 'auto' }}>
+    <svg viewBox="0 0 80 80" style={{ width: '100%', maxWidth: 'min(55%, 200px)', height: 'auto' }}>
       {/* Track ring */}
       <circle
         cx="40" cy="40" r={ringR}
@@ -122,7 +122,7 @@ export const Photosynthesis = ({ lightLevel }: PhotosynthesisProps) => {
         </div>
         <div className="flex items-center gap-1 text-xs text-[--color-md-on-surface-variant]">
           <Zap className="size-3" />
-          <span>Photosynthetic Efficiency</span>
+          <span>Greenhouse Efficiency</span>
         </div>
       </div>
 

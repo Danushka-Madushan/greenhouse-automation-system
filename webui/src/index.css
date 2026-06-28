@@ -11,7 +11,7 @@
   /* ── Refreshed M3 Palette — Sage-Green seed, softer & warmer ── */
 
   /* Primary: deep sage-teal — calmer than the old vivid teal */
-  --color-md-primary: oklch(0.42 0.085 165);
+  --color-md-primary: oklch(48.879% 0.13824 147.824);
   --color-md-on-primary: oklch(1.00 0.00 0);
   --color-md-primary-container: oklch(0.90 0.040 163);
   --color-md-on-primary-container: oklch(0.22 0.06 163);

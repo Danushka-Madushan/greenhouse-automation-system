@@ -49,10 +49,7 @@ const SimulationBar = ({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold" style={{ color: 'var(--color-md-on-surface)' }}>
-              Sensor Simulator
-            </p>
-            <p className="text-[11px]" style={{ color: 'var(--color-md-on-surface-variant)' }}>
-              Simulate environmental data
+              Simulator
             </p>
           </div>
 

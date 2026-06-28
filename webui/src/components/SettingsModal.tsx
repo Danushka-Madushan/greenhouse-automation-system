@@ -198,7 +198,7 @@ export const SettingsModal = ({
                       value={formData.cropKey}
                       onChange={(val) => handleSelectPreset(val as string)}
                     >
-                      <Select.Trigger className="w-full rounded-xl border border-[--color-md-outline] bg-transparent px-3.5 py-2.5 text-sm flex items-center justify-between outline-none focus-visible:ring-2 focus-visible:ring-[--color-md-primary] cursor-pointer hover:bg-[--color-md-surface-container-highest] transition-colors">
+                      <Select.Trigger className="w-full rounded-lg border border-green-500/70 bg-transparent px-3.5 py-2.5 text-sm flex items-center justify-between outline-none focus-visible:ring-2 focus-visible:ring-[--color-md-primary] cursor-pointer hover:bg-[--color-md-surface-container-highest] transition-colors">
                         <Select.Value />
                         <Select.Indicator />
                       </Select.Trigger>
@@ -243,7 +243,7 @@ export const SettingsModal = ({
                       type="text"
                       value={formData.cropName}
                       onChange={handleCustomNameChange}
-                      className="w-full rounded-xl border border-[--color-md-outline] bg-transparent px-3.5 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[--color-md-primary] hover:bg-[--color-md-surface-container-highest] transition-colors"
+                      className="w-full rounded-lg border border-green-500/70 bg-transparent px-3.5 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[--color-md-primary] hover:bg-[--color-md-surface-container-highest] transition-colors"
                       placeholder="Enter crop name..."
                       required
                     />
@@ -261,7 +261,7 @@ export const SettingsModal = ({
                       max="50000"
                       value={String(formData.tankCapacity)}
                       onChange={(e) => handleInputChange('tankCapacity', Number(e.target.value))}
-                      className="w-full rounded-xl border border-[--color-md-outline] bg-transparent px-3.5 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[--color-md-primary] hover:bg-[--color-md-surface-container-highest] transition-colors"
+                      className="w-full rounded-lg border border-blue-500/70 bg-transparent px-3.5 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[--color-md-primary] hover:bg-[--color-md-surface-container-highest] transition-colors"
                       required
                     />
                   </div>

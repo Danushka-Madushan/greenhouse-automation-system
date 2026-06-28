@@ -17,14 +17,14 @@ type TabId = 'dashboard' | 'analytics'
 
 /* ─── App ──────────────────────────────────────────── */
 const App = () => {
-  const [waterLevel, setWaterLevel] = useState(68)
-  const [temperature, setTemperature] = useState(24.5)
-  const [humidity, setHumidity] = useState(62)
-  const [lightLevel, setLightLevel] = useState(720)
-  const [sector1, setSector1] = useState(45)
-  const [sector2, setSector2] = useState(52)
-  const [sector3, setSector3] = useState(38)
-  const [sector4, setSector4] = useState(48)
+  const [waterLevel, setWaterLevel] = useState(0)
+  const [temperature, setTemperature] = useState(0)
+  const [humidity, setHumidity] = useState(0)
+  const [lightLevel, setLightLevel] = useState(0)
+  const [sector1, setSector1] = useState(0)
+  const [sector2, setSector2] = useState(0)
+  const [sector3, setSector3] = useState(0)
+  const [sector4, setSector4] = useState(0)
 
   const [isConnected, setIsConnected] = useState(false)
 

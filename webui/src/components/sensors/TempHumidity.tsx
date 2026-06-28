@@ -151,6 +151,7 @@ export const TempHumidity = ({ temperature, humidity, minTemp, maxTemp, minHum, 
             />
             {/* Centred label */}
             <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ marginTop: '6%' }}>
+              <Thermometer className="size-4.5 text-[--color-md-secondary] mb-0.5" />
               <span className="text-[20px] font-bold text-[--color-md-on-surface] leading-none">
                 {temperature.toFixed(1)}°
               </span>
