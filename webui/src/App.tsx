@@ -11,6 +11,7 @@ import { SoilMoisture } from './components/SoilMoisture'
 import { AnalyticsEmpty } from './components/AnalyticsEmpty'
 import { SettingsModal } from './components/SettingsModal'
 import { signalRService } from './services/signalr'
+import { Parser } from './utils/parser'
 
 /* ─── Types ────────────────────────────────────────── */
 type TabId = 'dashboard' | 'analytics'
@@ -72,7 +73,6 @@ const App = () => {
   const [simEnabled, setSimEnabled] = useState(true)
 
   const [activeTab, setActiveTab] = useState<TabId>('dashboard')
-  const [status, setStatus] = useState<string>('')
 
   // Crop / Threshold state config
   const [cropKey, setCropKey] = useState('eggplant')
@@ -88,6 +88,17 @@ const App = () => {
   // Settings Modal Open State
   const [settingsOpen, setSettingsOpen] = useState(false)
 
+  const resetAllValuesToZeroOnOffline = () => {
+    setWaterLevel(0)
+    setTemperature(0)
+    setHumidity(0)
+    setLightLevel(0)
+    setSector1(0)
+    setSector2(0)
+    setSector3(0)
+    setSector4(0)
+  }
+
   useEffect(() => {
     signalRService.startConnection()
 
@@ -97,11 +108,17 @@ const App = () => {
 
     signalRService.connection.on('SYS:OFFLINE', () => {
       setIsConnected(false)
+      resetAllValuesToZeroOnOffline()
     })
 
-    signalRService.connection.on('OnSensorUpdate', (data: string) => {
-      console.log('Received data from C#:', data)
-      setStatus(data)
+    signalRService.connection.on('onSensorUpdate:TEMP_HUMIDITY', (data: string) => {
+      const { temperature, humidity } = Parser.parseTempHumidity(data)
+      setTemperature(temperature)
+      setHumidity(humidity)
+    })
+
+    signalRService.connection.on('onSensorError:TEMP_HUMIDITY', (data: string) => {
+      console.log('Received error from C#:', data)
     })
 
     signalRService.connection.on('CommandAcknowledged', (msg: string) => {
@@ -109,7 +126,8 @@ const App = () => {
     })
 
     return () => {
-      signalRService.connection.off('OnSensorUpdate')
+      signalRService.connection.off('onSensorUpdate:TEMP_HUMIDITY')
+      signalRService.connection.off('onSensorError:TEMP_HUMIDITY')
       signalRService.connection.off('CommandAcknowledged')
       signalRService.connection.off('SYS:ONLINE')
       signalRService.connection.off('SYS:OFFLINE')
@@ -152,7 +170,7 @@ const App = () => {
               className="text-[10px] font-medium tracking-[0.12em] uppercase hidden sm:block"
               style={{ color: 'var(--color-md-on-surface-variant)' }}
             >
-              Automation System{status ? ` · ${status}` : ''}
+              Automation System
             </span>
           </div>
         </div>
