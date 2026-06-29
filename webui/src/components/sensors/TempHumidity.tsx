@@ -1,4 +1,4 @@
-import { Thermometer, Droplets, AlertTriangle, Waves, Gauge, CheckCircle } from 'lucide-react'
+import { Thermometer, Droplets, AlertTriangle, Waves, CheckCircle } from 'lucide-react'
 
 interface TempHumidityProps {
   temperature: number
@@ -127,11 +127,12 @@ export const TempHumidity = ({ temperature, humidity, minTemp, maxTemp, minHum, 
       <div className="px-5 pt-5 pb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs font-medium tracking-widest uppercase text-[--color-md-on-surface-variant] mb-1">
-            Climate
+            Atomosphere
           </p>
-          <h2 className="text-[20px] font-medium text-[--color-md-on-surface] leading-tight truncate">
-            Atmosphere
+          <h2 className="text-[20px] font-medium text-[--color-md-on-surface] leading-tight">
+            {vpdV.toFixed(2)} <span className="text-xs font-normal text-[--color-md-on-surface-variant]">kPa</span>
           </h2>
+          <p className="text-xs text-[--color-md-on-surface-variant] mt-0.5">Absorbing Nutrients</p>
         </div>
         <div className="w-11 h-11 rounded-2xl bg-[--color-md-tertiary-container] flex items-center justify-center shrink-0">
           <Thermometer className="size-5 text-[--color-md-on-tertiary-container]" />
@@ -197,7 +198,6 @@ export const TempHumidity = ({ temperature, humidity, minTemp, maxTemp, minHum, 
       <div className="px-3 pb-1 flex gap-1.5">
         <StatChip icon={Thermometer} label="Feels Like" value={hi.toFixed(1)} unit="°C" accent="text-[--color-md-error]" />
         <StatChip icon={Waves} label="Dew Point" value={dp.toFixed(1)} unit="°C" accent="text-[--color-md-secondary]" />
-        <StatChip icon={Gauge} label="VPD" value={vpdV.toFixed(2)} unit="kPa" accent="text-[--color-md-tertiary]" />
       </div>
 
       {/* Status footer */}
