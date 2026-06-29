@@ -11,11 +11,12 @@ import SimulationBar from './components/SimulationBar'
 import FloatingSimulatorToggle from './components/FloatingSimulatorToggle'
 import FloatingSettingsToggle from './components/FloatingSettingsToggle'
 import Nav from './components/Nav'
+import { toast } from '@heroui/react/toast'
 
-/* ─── Types ────────────────────────────────────────── */
+/* Types */
 type TabId = 'dashboard' | 'analytics'
 
-/* ─── App ──────────────────────────────────────────── */
+/* App */
 const App = () => {
   const [waterLevel, setWaterLevel] = useState(0)
   const [temperature, setTemperature] = useState(0)
@@ -28,14 +29,14 @@ const App = () => {
 
   const [isConnected, setIsConnected] = useState(false)
 
-  // Sidebar open/closed
+  /* Sidebar open/closed */
   const [simOpen, setSimOpen] = useState(false)
-  // Simulation enabled/disabled toggle
+  /* Simulation enabled/disabled toggle */
   const [simEnabled, setSimEnabled] = useState(true)
 
   const [activeTab, setActiveTab] = useState<TabId>('dashboard')
 
-  // Crop / Threshold state config
+  /* Crop / Threshold state config */
   const [cropKey, setCropKey] = useState('eggplant')
   const [cropName, setCropName] = useState('Eggplant')
   const [minTemp, setMinTemp] = useState(24)
@@ -46,7 +47,7 @@ const App = () => {
   const [maxMoisture, setMaxMoisture] = useState(75)
   const [tankCapacity, setTankCapacity] = useState(2000)
 
-  // Settings Modal Open State
+  /* Settings Modal Open State */
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const resetAllValuesToZeroOnOffline = () => {
@@ -72,6 +73,11 @@ const App = () => {
       resetAllValuesToZeroOnOffline()
     })
 
+    signalRService.connection.on('onSensorUpdate:LIGHT_INTENSITY', (data: string) => {
+      const lightLevel = Parser.parseLightIntensity(data)
+      setLightLevel(lightLevel)
+    })
+
     signalRService.connection.on('onSensorUpdate:TEMP_HUMIDITY', (data: string) => {
       const { temperature, humidity } = Parser.parseTempHumidity(data)
       setTemperature(temperature)
@@ -80,6 +86,11 @@ const App = () => {
 
     signalRService.connection.on('onSensorError:TEMP_HUMIDITY', (data: string) => {
       console.log('Received error from C#:', data)
+      setTemperature(0)
+      setHumidity(0)
+      toast.danger("Temperature/Humidity Sensor", {
+        description: data.split(':').slice(2).join(' ').replace(/_/g, ' ')
+      })
     })
 
     signalRService.connection.on('CommandAcknowledged', (msg: string) => {
@@ -88,6 +99,7 @@ const App = () => {
 
     return () => {
       signalRService.connection.off('onSensorUpdate:TEMP_HUMIDITY')
+      signalRService.connection.off('onSensorUpdate:LIGHT_INTENSITY')
       signalRService.connection.off('onSensorError:TEMP_HUMIDITY')
       signalRService.connection.off('CommandAcknowledged')
       signalRService.connection.off('SYS:ONLINE')
@@ -101,14 +113,10 @@ const App = () => {
       style={{ backgroundColor: 'var(--color-md-surface)', color: 'var(--color-md-on-surface)' }}
     >
 
-      {/* ══════════════════════════════════════════════
-          TOP APP BAR — logo · tabs · status
-      ══════════════════════════════════════════════ */}
+      {/* TOP APP BAR - logo · tabs · status */}
       <Nav activeTab={activeTab} setActiveTab={setActiveTab} isConnected={isConnected} />
 
-      {/* ══════════════════════════════════════════════
-          MAIN CONTENT
-      ══════════════════════════════════════════════ */}
+      {/* MAIN CONTENT */}
       <main
         className="px-4 sm:px-6 lg:px-8 pt-8 pb-20 transition-all duration-300 ease-in-out"
         style={{ marginRight: simOpen ? '288px' : '0' }}
@@ -160,19 +168,13 @@ const App = () => {
         )}
       </main>
 
-      {/* ══════════════════════════════════════════════
-          FLOATING SETTINGS BUTTON (Bottom-Left Corner)
-      ══════════════════════════════════════════════ */}
+      {/* FLOATING SETTINGS BUTTON (Bottom-Left Corner) */}
       <FloatingSettingsToggle setSettingsOpen={setSettingsOpen} />
 
-      {/* ══════════════════════════════════════════════
-          FLOATING RE-OPEN BUTTON (visible only when sidebar is closed)
-      ══════════════════════════════════════════════ */}
+      {/* FLOATING RE-OPEN BUTTON (visible only when sidebar is closed) */}
       <FloatingSimulatorToggle simOpen={simOpen} setSimOpen={setSimOpen} />
 
-      {/* ══════════════════════════════════════════════
-          SENSOR SIMULATOR RIGHT SIDEBAR
-      ══════════════════════════════════════════════ */}
+      {/* SENSOR SIMULATOR RIGHT SIDEBAR */}
       <SimulationBar
         humidity={humidity}
         lightLevel={lightLevel}
