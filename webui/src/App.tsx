@@ -64,6 +64,7 @@ const App = () => {
   useEffect(() => {
     signalRService.startConnection()
 
+    /* Custom Gateway Events (Graceful) */
     signalRService.connection.on('SYS:ONLINE', () => {
       setIsConnected(true)
     })
@@ -73,6 +74,26 @@ const App = () => {
       resetAllValuesToZeroOnOffline()
     })
 
+    /* NATIVE SIGNALR LIFECYCLE EVENTS (Handles Crashes & Drops) */
+    signalRService.connection.onclose((error) => {
+      console.warn('SignalR Connection Closed Unexpectedly:', error)
+      setIsConnected(false)
+      resetAllValuesToZeroOnOffline()
+    })
+
+    signalRService.connection.onreconnecting((error) => {
+      console.warn('SignalR Connection Lost. Attempting to reconnect...', error)
+      setIsConnected(false)
+      resetAllValuesToZeroOnOffline()
+    })
+
+    signalRService.connection.onreconnected((connectionId) => {
+      console.log('SignalR Reconnected Successfully. ID:', connectionId)
+      setIsConnected(true)
+      /* The C# server will automatically push new sensor data on its next polling cycle. */
+    })
+
+    /* Sensor Data Listeners */
     signalRService.connection.on('onSensorUpdate:LIGHT_INTENSITY', (data: string) => {
       const lightLevel = Parser.parseLightIntensity(data)
       setLightLevel(lightLevel)
