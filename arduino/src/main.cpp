@@ -4,6 +4,7 @@
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
+#define LDR_PIN A0
 
 using namespace GreenOS;
 
@@ -14,6 +15,8 @@ DHT dht(DHTPIN, DHTTYPE);
 /* Timing variables for non-blocking execution */
 unsigned long dht_lastReadTime = 0;
 const unsigned long dht_readInterval = 2000; // Read every 2000ms (2 seconds)
+unsigned long ldr_lastReadTime = 0;
+const unsigned long ldr_readInterval = 1000; // Read every 1000ms (1 second)
 /* Emit Data Interval */
 unsigned long previousEmitMillis = 0;
 const long emitInterval = 500; // Interval at which to send data (milliseconds)
@@ -22,6 +25,7 @@ bool isConnected = false;
 void setup()
 {
   Serial.begin(9600);
+  pinMode(LDR_PIN, INPUT);
   /* Instantiate the EventHandler safely now, when the Serial is ready */
   handler = new EventHandler(&Serial);
   dht.begin();
@@ -45,6 +49,21 @@ void loop()
 
     if (handler != nullptr)
     {
+      /* Read light intensity */
+      if (currentMillis - ldr_lastReadTime >= ldr_readInterval)
+      {
+        ldr_lastReadTime = currentMillis;
+
+        /* Read the raw analog value (0 - 1023) */
+        int rawAnalog = analogRead(LDR_PIN);
+
+        /* Emit light intensity data */
+        if (Serial.availableForWrite())
+        {
+          handler->emitLightIntensity(rawAnalog);
+        }
+      }
+
       /* Read sensor data every 2 seconds (DHT22 needs at least 2 seconds between reads) */
       if (currentMillis - dht_lastReadTime >= dht_readInterval)
       {
