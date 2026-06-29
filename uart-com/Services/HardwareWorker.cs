@@ -194,11 +194,11 @@ public class HardwareWorker(
                         /* Example: "ERR:SENSOR_DH22:READ_FAIL" */
                         await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.TEMP_HUMIDITY_ERROR, line, cancellationToken: stoppingToken);
                     }
-                    
-
-                    /* Future Integration Point: */
-                    /* 1. Parse line (e.g., "STATUS:MOISTURE:24") */
-                    /* 2. Fire internal event to SignalR Hub */
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.LIGHT_INTENSITY_DATA_DYN))
+                    {
+                        /* Example: "STATUS:LIGHT_INTENSITY:75.3" */
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_LIGHT_INTENSITY, line, cancellationToken: stoppingToken);
+                    }
                 }
             }
             catch (TimeoutException)
