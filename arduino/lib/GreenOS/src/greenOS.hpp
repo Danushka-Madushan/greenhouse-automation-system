@@ -16,6 +16,7 @@ namespace GreenOS
     EventHandler(HardwareSerial* serial);
 
     void onReceive(String &incoming);
+    void emitLightIntensity(float lightIntensity);
     void emitTemperatureHumidity(float temperature, float humidity);
     void emitDH22Error(const String &errorMessage);
   };
