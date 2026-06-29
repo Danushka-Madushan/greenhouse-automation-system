@@ -9,4 +9,12 @@ export class Parser {
       humidity: parseFloat(humidity)
     };
   };
+
+  public static parseLightIntensity: (statusStr: string) => number = (statusStr) => {
+    // 1. Get everything after the last colon
+    const lightLevel = statusStr.split(':').pop();
+
+    // 2. Convert string to number and return
+    return lightLevel ? parseFloat(lightLevel) : 0;
+  };
 }
