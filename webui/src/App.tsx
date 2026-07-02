@@ -17,6 +17,21 @@ import { OfflineOverlay } from './components/OfflineOverlay'
 /* Types */
 type TabId = 'dashboard' | 'analytics'
 
+const WATER_PUMP_DEFAULT_SECONDS = 3
+const WATER_PUMP_MIN_SECONDS = 3
+const WATER_PUMP_MAX_SECONDS = 6
+
+const getPumpRunSecondsFromStatus = (statusMessage: string): number => {
+  const payload = statusMessage.split(':').slice(2).join(':')
+
+  if (!payload.startsWith('RUNNING:')) {
+    return 0
+  }
+
+  const value = Number(payload.split(':')[1])
+  return Number.isFinite(value) ? value : 0
+}
+
 /* App */
 const App = () => {
   const [waterLevel, setWaterLevel] = useState(0)
@@ -51,6 +66,13 @@ const App = () => {
   /* Settings Modal Open State */
   const [settingsOpen, setSettingsOpen] = useState(false)
 
+  /* Actuator States */
+  const [isExhaustFanOn, setIsExhaustFanOn] = useState(false)
+  const [isWaterPumpRunning, setIsWaterPumpRunning] = useState(false)
+  const [waterPumpRemainingSeconds, setWaterPumpRemainingSeconds] = useState(0)
+  const [pumpDurationSecondsInput, setPumpDurationSecondsInput] = useState(String(WATER_PUMP_DEFAULT_SECONDS))
+  const [isSubmittingPumpCommand, setIsSubmittingPumpCommand] = useState(false)
+
   const resetAllValuesToZeroOnOffline = () => {
     setWaterLevel(0)
     setTemperature(0)
@@ -60,6 +82,42 @@ const App = () => {
     setSector2(0)
     setSector3(0)
     setSector4(0)
+    setIsExhaustFanOn(false)
+    setIsWaterPumpRunning(false)
+    setWaterPumpRemainingSeconds(0)
+  }
+
+  const clampPumpSeconds = (value: number) => {
+    return Math.min(WATER_PUMP_MAX_SECONDS, Math.max(WATER_PUMP_MIN_SECONDS, value))
+  }
+
+  const parsePumpSecondsInput = () => {
+    const parsed = Number.parseInt(pumpDurationSecondsInput, 10)
+    if (!Number.isFinite(parsed)) {
+      return WATER_PUMP_DEFAULT_SECONDS
+    }
+
+    return clampPumpSeconds(parsed)
+  }
+
+  const handleFanTurnOn = async () => {
+    await signalRService.turnExhaustFanOn()
+  }
+
+  const handleFanTurnOff = async () => {
+    await signalRService.turnExhaustFanOff()
+  }
+
+  const handlePumpRun = async () => {
+    const seconds = parsePumpSecondsInput()
+    setPumpDurationSecondsInput(String(seconds))
+    setIsSubmittingPumpCommand(true)
+
+    try {
+      await signalRService.runWaterPump(seconds)
+    } finally {
+      setIsSubmittingPumpCommand(false)
+    }
   }
 
   useEffect(() => {
@@ -130,14 +188,70 @@ const App = () => {
 
     signalRService.connection.on('CommandAcknowledged', (msg: string) => {
       console.log(msg)
+
+      if (msg.startsWith('ACK:GATEWAY:REJECTED:WATER_PUMP_SECONDS_OUT_OF_RANGE')) {
+        toast.warning('Water Pump Command Rejected', {
+          description: 'Allowed pump duration is 3 to 6 seconds.'
+        })
+        return
+      }
+
+      if (msg.startsWith('ACK:GATEWAY:QUEUED:CMD:WATER_PUMP:RUN_SECONDS:')) {
+        toast.success('Water Pump Triggered', {
+          description: `Pump command queued for ${msg.split(':').pop()} second(s).`
+        })
+        return
+      }
+
+      if (msg.startsWith('ACK:GATEWAY:QUEUED:CMD:EXHAUST_FAN:ON')) {
+        toast.success('Exhaust Fan', {
+          description: 'Fan ON command queued.'
+        })
+        return
+      }
+
+      if (msg.startsWith('ACK:GATEWAY:QUEUED:CMD:EXHAUST_FAN:OFF')) {
+        toast.success('Exhaust Fan', {
+          description: 'Fan OFF command queued.'
+        })
+      }
+    })
+
+    signalRService.connection.on('onActuatorUpdate:EXHAUST_FAN', (data: string) => {
+      const isOn = data.endsWith(':ON')
+      setIsExhaustFanOn(isOn)
+    })
+
+    signalRService.connection.on('onActuatorUpdate:WATER_PUMP', (data: string) => {
+      const isRunning = data.includes('RUNNING:')
+      setIsWaterPumpRunning(isRunning)
+
+      if (isRunning) {
+        setWaterPumpRemainingSeconds(getPumpRunSecondsFromStatus(data))
+      } else {
+        setWaterPumpRemainingSeconds(0)
+      }
+    })
+
+    signalRService.connection.on('onActuatorAck:EXHAUST_FAN', (data: string) => {
+      console.log('Exhaust Fan ACK:', data)
+    })
+
+    signalRService.connection.on('onActuatorAck:WATER_PUMP', (data: string) => {
+      console.log('Water Pump ACK:', data)
     })
 
     return () => {
       signalRService.connection.off('onSensorUpdate:TEMP_HUMIDITY')
       signalRService.connection.off('onSensorUpdate:LIGHT_INTENSITY')
       signalRService.connection.off('onSensorUpdate:WATER_LEVEL')
+      signalRService.connection.off('onSensorUpdate:SOIL_MOISTURE')
       signalRService.connection.off('onSensorError:TEMP_HUMIDITY')
       signalRService.connection.off('CommandAcknowledged')
+      signalRService.connection.off('onActuatorUpdate:EXHAUST_FAN')
+      signalRService.connection.off('onActuatorUpdate:WATER_PUMP')
+      signalRService.connection.off('onActuatorAck:EXHAUST_FAN')
+      signalRService.connection.off('onActuatorAck:WATER_PUMP')
       signalRService.connection.off('SYS:ONLINE')
       signalRService.connection.off('SYS:OFFLINE')
     }
@@ -148,7 +262,6 @@ const App = () => {
       className="min-h-screen"
       style={{ backgroundColor: 'var(--color-md-surface)', color: 'var(--color-md-on-surface)' }}
     >
-
       {/* Offline Gate - renders above everything, blocks all interaction */}
       <OfflineOverlay isConnected={isConnected} />
 
@@ -163,18 +276,101 @@ const App = () => {
         {/* ── Dashboard Panel ── */}
         {activeTab === 'dashboard' && (
           <div className="flex flex-col gap-8">
+            {/* ── Header & Compact Actuator Controls ── */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              
+              {/* Page headline with dynamic crop name */}
+              <div>
+                <h1
+                  className="text-[32px] font-medium leading-tight mb-1"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--color-md-on-surface)' }}
+                >
+                  Monitoring Crops: <span className="font-bold text-[--color-md-primary]">{cropName}</span>
+                </h1>
+                <p className="text-sm" style={{ color: 'var(--color-md-on-surface-variant)' }}>
+                  Real-time greenhouse environment overview
+                </p>
+              </div>
 
-            {/* Page headline with dynamic crop name */}
-            <div>
-              <h1
-                className="text-[32px] font-medium leading-tight mb-1"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-md-on-surface)' }}
+              {/* Compact Actuator Controls (Prototype) */}
+              <div
+                className="flex items-center gap-4 rounded-2xl p-2 px-4 shadow-sm"
+                style={{
+                  backgroundColor: 'var(--color-md-surface-container)',
+                  border: '1px solid var(--color-md-outline-variant)'
+                }}
               >
-                Monitoring Crops: <span className="font-bold text-[--color-md-primary]">{cropName}</span>
-              </h1>
-              <p className="text-sm" style={{ color: 'var(--color-md-on-surface-variant)' }}>
-                Real-time greenhouse environment overview
-              </p>
+                {/* Exhaust Fan Compact */}
+                <div className="flex items-center gap-3 border-r pr-4" style={{ borderColor: 'var(--color-md-outline-variant)' }}>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--color-md-on-surface)' }}>
+                    Fan
+                  </span>
+                  <div className="flex gap-1 p-1 rounded-xl bg-black/5 dark:bg-white/5">
+                    <button
+                      onClick={() => void handleFanTurnOn()}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                      style={{
+                        backgroundColor: isExhaustFanOn ? 'var(--color-md-primary)' : 'transparent',
+                        color: isExhaustFanOn ? 'var(--color-md-on-primary)' : 'var(--color-md-on-surface)'
+                      }}
+                    >
+                      ON
+                    </button>
+                    <button
+                      onClick={() => void handleFanTurnOff()}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                      style={{
+                        backgroundColor: !isExhaustFanOn ? 'var(--color-md-surface-container-highest)' : 'transparent',
+                        color: !isExhaustFanOn ? 'var(--color-md-on-surface)' : 'var(--color-md-on-surface)'
+                      }}
+                    >
+                      OFF
+                    </button>
+                  </div>
+                </div>
+
+                {/* Water Pump Compact */}
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold" style={{ color: 'var(--color-md-on-surface)' }}>
+                      Pump
+                    </span>
+                    {isWaterPumpRunning && (
+                      <span className="text-[10px] font-bold text-center -mt-1" style={{ color: 'var(--color-md-secondary)' }}>
+                        {waterPumpRemainingSeconds}s
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={WATER_PUMP_MIN_SECONDS}
+                      max={WATER_PUMP_MAX_SECONDS}
+                      value={pumpDurationSecondsInput}
+                      onChange={(event) => setPumpDurationSecondsInput(event.target.value)}
+                      className="w-14 h-8 rounded-lg text-center text-xs font-semibold focus:outline-none"
+                      style={{
+                        backgroundColor: 'var(--color-md-surface-container-highest)',
+                        color: 'var(--color-md-on-surface)',
+                        border: '1px solid var(--color-md-outline-variant)'
+                      }}
+                      title={`Allowed range: ${WATER_PUMP_MIN_SECONDS}-${WATER_PUMP_MAX_SECONDS}s`}
+                    />
+                    <button
+                      onClick={() => void handlePumpRun()}
+                      disabled={isSubmittingPumpCommand}
+                      className="h-8 px-3 rounded-lg text-xs font-bold transition-all disabled:opacity-60"
+                      style={{
+                        backgroundColor: 'var(--color-md-secondary)',
+                        color: 'var(--color-md-on-secondary)'
+                      }}
+                    >
+                      {isSubmittingPumpCommand ? '...' : 'RUN'}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Metric Cards */}
@@ -262,7 +458,6 @@ const App = () => {
           setSettingsOpen(false)
         }}
       />
-
     </div>
   )
 }

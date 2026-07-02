@@ -1,4 +1,5 @@
 using System.IO.Ports;
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.SignalR;
 using uart_com.Constants;
 using uart_com.Hubs;
@@ -9,13 +10,14 @@ public class HardwareWorker(
     ILogger<HardwareWorker> logger,
     IHubContext<SignalIR> hubContext,
     GreenhouseState greenhouseState
-    ) : BackgroundService
+    ) : BackgroundService, IHardwareCommandBridge
 {
     private readonly ILogger<HardwareWorker> _logger = logger;
     private readonly IHubContext<SignalIR> _hubContext = hubContext;
     private readonly GreenhouseState _greenhouseState = greenhouseState;
     private SerialPort? _serialPort;
     private bool _isConnected = false;
+    private readonly ConcurrentQueue<string> _pendingCommands = new();
 
     /* Baud Rate */
     private const int BaudRate = 9600;
@@ -49,6 +51,7 @@ public class HardwareWorker(
             {
                 _greenhouseState.IsBoardOnline = true;
                 await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.SYS_ONLINE, cancellationToken: stoppingToken);
+                await BroadcastActuatorSnapshotAsync(stoppingToken);
                 
                 await ReadDataLoopAsync(stoppingToken);
             }
@@ -161,10 +164,10 @@ public class HardwareWorker(
 
     private async Task ReadDataLoopAsync(CancellationToken stoppingToken)
     {
-        /* Increase timeout for standard operations. If the Arduino is quiet for 5 seconds,
-         * it throws a controlled timeout, allowing us to check for app shutdown requests.
+        /* Use a short timeout so command queue writes are drained quickly even when
+         * the Arduino does not emit sensor lines for a moment.
          */
-        _serialPort!.ReadTimeout = 5000;
+        _serialPort!.ReadTimeout = 500;
 
         /* ReadLine() is a synchronous blocking call — it has no knowledge of CancellationToken.
          * Without this registration, Ctrl+C fires but ReadLine() holds the thread for up to
@@ -178,6 +181,8 @@ public class HardwareWorker(
         {
             try
             {
+                await DrainPendingCommandsAsync(stoppingToken);
+
                 string line = _serialPort.ReadLine().Trim();
 
                 if (!string.IsNullOrEmpty(line))
@@ -209,6 +214,41 @@ public class HardwareWorker(
                         /* Example: "STATUS:SOIL_MOISTURE:65" */
                         await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_SOIL_MOISTURE, line, cancellationToken: stoppingToken);
                     }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.EXHAUST_FAN_STATUS_DYN))
+                    {
+                        _greenhouseState.IsExhaustFanOn = line.EndsWith("ON", StringComparison.OrdinalIgnoreCase);
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_EXHAUST_FAN, line, cancellationToken: stoppingToken);
+                    }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.WATER_PUMP_STATUS_DYN))
+                    {
+                        string status = line[GreenOS.Events.Incoming.Ardiono.WATER_PUMP_STATUS_DYN.Length..].Trim();
+                        _greenhouseState.IsWaterPumpRunning = status.StartsWith("RUNNING", StringComparison.OrdinalIgnoreCase);
+
+                        if (_greenhouseState.IsWaterPumpRunning)
+                        {
+                            var parts = status.Split(':');
+                            if (parts.Length >= 2 && int.TryParse(parts[1], out int remainingSeconds) && remainingSeconds > 0)
+                            {
+                                _greenhouseState.WaterPumpRunUntilUtc = DateTime.UtcNow.AddSeconds(remainingSeconds);
+                            }
+                        }
+                        else
+                        {
+                            _greenhouseState.WaterPumpRunUntilUtc = null;
+                        }
+
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_WATER_PUMP, line, cancellationToken: stoppingToken);
+                    }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.EXHAUST_FAN_ACK_DYN))
+                    {
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.ACK_EXHAUST_FAN, line, cancellationToken: stoppingToken);
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.COMMAND_ACKNOWLEDGED, line, cancellationToken: stoppingToken);
+                    }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.WATER_PUMP_ACK_DYN))
+                    {
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.ACK_WATER_PUMP, line, cancellationToken: stoppingToken);
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.COMMAND_ACKNOWLEDGED, line, cancellationToken: stoppingToken);
+                    }
                 }
             }
             catch (TimeoutException)
@@ -231,6 +271,55 @@ public class HardwareWorker(
                 break;
             }
         }
+    }
+
+    public bool TryQueueCommand(string command)
+    {
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            return false;
+        }
+
+        _pendingCommands.Enqueue(command);
+        return true;
+    }
+
+    private async Task DrainPendingCommandsAsync(CancellationToken stoppingToken)
+    {
+        if (_serialPort == null || !_serialPort.IsOpen)
+        {
+            return;
+        }
+
+        while (_pendingCommands.TryDequeue(out string? command))
+        {
+            try
+            {
+                _serialPort.Write(command);
+                _logger.LogInformation($"[{DateTime.Now:HH:mm:ss}] [C# -> ARDUINO] {command.Trim()}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Failed to send queued command '{command.Trim()}': {ex.Message}");
+                _pendingCommands.Enqueue(command);
+                await Task.Delay(100, stoppingToken);
+                break;
+            }
+        }
+    }
+
+    public async Task BroadcastActuatorSnapshotAsync(CancellationToken cancellationToken)
+    {
+        string fanStatus = _greenhouseState.IsExhaustFanOn
+            ? $"{GreenOS.Events.Incoming.Ardiono.EXHAUST_FAN_STATUS_DYN}ON"
+            : $"{GreenOS.Events.Incoming.Ardiono.EXHAUST_FAN_STATUS_DYN}OFF";
+
+        string pumpStatus = _greenhouseState.IsWaterPumpRunning
+            ? $"{GreenOS.Events.Incoming.Ardiono.WATER_PUMP_STATUS_DYN}RUNNING:{_greenhouseState.WaterPumpRemainingSeconds}"
+            : $"{GreenOS.Events.Incoming.Ardiono.WATER_PUMP_STATUS_DYN}OFF";
+
+        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_EXHAUST_FAN, fanStatus, cancellationToken: cancellationToken);
+        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_WATER_PUMP, pumpStatus, cancellationToken: cancellationToken);
     }
 
     public override void Dispose()

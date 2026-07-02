@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <DHT.h>
 #include "greenOS.hpp"
+#include "greenOS_events.hpp"
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
@@ -41,9 +42,101 @@ unsigned long previousEmitMillis = 0;
 const long emitInterval = 500; // Interval at which to send data (milliseconds)
 bool isConnected = false;
 
+/* Actuator runtime state */
+bool isExhaustFanOn = false;
+bool isWaterPumpRunning = false;
+unsigned long waterPumpRunUntilMillis = 0;
+
 /* Actuator Pins */
 #define RELAY_WATER_PUMP 5
 #define RELAY_FAN 6
+
+/* Relay module is active-low: LOW = ON, HIGH = OFF */
+void applyActuatorState()
+{
+  digitalWrite(RELAY_FAN, isExhaustFanOn ? LOW : HIGH);
+  digitalWrite(RELAY_WATER_PUMP, isWaterPumpRunning ? LOW : HIGH);
+}
+
+void emitExhaustFanStatus()
+{
+  Serial.print(Events::Emit::EXHAUST_FAN_STATUS_DYN);
+  Serial.println(isExhaustFanOn ? "ON" : "OFF");
+}
+
+void emitWaterPumpStatus(unsigned long currentMillis)
+{
+  Serial.print(Events::Emit::WATER_PUMP_STATUS_DYN);
+
+  if (isWaterPumpRunning)
+  {
+    unsigned long remainingMillis = waterPumpRunUntilMillis > currentMillis
+      ? waterPumpRunUntilMillis - currentMillis
+      : 0;
+    unsigned long remainingSeconds = (remainingMillis + 999UL) / 1000UL;
+    Serial.print("RUNNING:");
+    Serial.println(remainingSeconds);
+  }
+  else
+  {
+    Serial.println("OFF");
+  }
+}
+
+void emitExhaustFanAck(const char *result)
+{
+  Serial.print(Events::Emit::EXHAUST_FAN_ACK_DYN);
+  Serial.println(result);
+}
+
+void emitWaterPumpAck(const char *result)
+{
+  Serial.print(Events::Emit::WATER_PUMP_ACK_DYN);
+  Serial.println(result);
+}
+
+void handleActuatorCommand(String incoming, unsigned long currentMillis)
+{
+  incoming.trim();
+
+  if (incoming == Events::Incoming::EXHAUST_FAN_ON)
+  {
+    isExhaustFanOn = true;
+    applyActuatorState();
+    emitExhaustFanAck("OK:ON");
+    emitExhaustFanStatus();
+    return;
+  }
+
+  if (incoming == Events::Incoming::EXHAUST_FAN_OFF)
+  {
+    isExhaustFanOn = false;
+    applyActuatorState();
+    emitExhaustFanAck("OK:OFF");
+    emitExhaustFanStatus();
+    return;
+  }
+
+  if (incoming.startsWith(Events::Incoming::WATER_PUMP_RUN_SECONDS_DYN))
+  {
+    String secondsText = incoming.substring(strlen(Events::Incoming::WATER_PUMP_RUN_SECONDS_DYN));
+    secondsText.trim();
+    long seconds = secondsText.toInt();
+
+    if (seconds <= 0)
+    {
+      emitWaterPumpAck("INVALID_SECONDS");
+      return;
+    }
+
+    unsigned long durationMillis = (unsigned long)seconds * 1000UL;
+    waterPumpRunUntilMillis = currentMillis + durationMillis;
+    isWaterPumpRunning = true;
+    applyActuatorState();
+    emitWaterPumpAck("OK:RUNNING");
+    emitWaterPumpStatus(currentMillis);
+  }
+}
 
 void setup()
 {
@@ -67,17 +160,28 @@ void setup()
   handler = new EventHandler(&Serial);
   ultrasonic = new Ultrasonic(TRIG_PIN, ECHO_PIN);
   dht.begin();
+
+  applyActuatorState();
 }
 
 void loop()
 {
   unsigned long currentMillis = millis();
 
+  if (isWaterPumpRunning && currentMillis >= waterPumpRunUntilMillis)
+  {
+    isWaterPumpRunning = false;
+    applyActuatorState();
+    emitWaterPumpStatus(currentMillis);
+    emitWaterPumpAck("OK:OFF");
+  }
+
   /* Trigger on Incomming */
   if (Serial.available() > 0)
   {
     /* Handle Incomming Events */
     String incoming = Serial.readStringUntil('\n');
+    handleActuatorCommand(incoming, currentMillis);
     handler->onReceive(incoming);
   }
 

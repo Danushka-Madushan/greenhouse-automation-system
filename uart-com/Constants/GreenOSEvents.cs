@@ -19,6 +19,14 @@ namespace uart_com.Constants
           /* Soil Moisture Data */
           public const string SOIL_MOISTURE_DATA_DYN = "STATUS:SOIL_MOISTURE:";
 
+          /* Actuator Status Updates */
+          public const string EXHAUST_FAN_STATUS_DYN = "STATUS:EXHAUST_FAN:";
+          public const string WATER_PUMP_STATUS_DYN = "STATUS:WATER_PUMP:";
+
+          /* Actuator Acknowledgements */
+          public const string EXHAUST_FAN_ACK_DYN = "ACK:EXHAUST_FAN:";
+          public const string WATER_PUMP_ACK_DYN = "ACK:WATER_PUMP:";
+
           /* System Check */
           public const string GREENHOUSE_UNO = "SYS:GREENHOUSE_UNO";
         }
@@ -35,6 +43,11 @@ namespace uart_com.Constants
         {
           /* System Check */
           public const string WHOAMI = "SYS:WHOAMI\n";
+
+          /* Actuator Commands */
+          public const string TURN_EXHAUST_FAN_ON = "CMD:EXHAUST_FAN:ON\n";
+          public const string TURN_EXHAUST_FAN_OFF = "CMD:EXHAUST_FAN:OFF\n";
+          public const string RUN_WATER_PUMP_SECONDS_DYN = "CMD:WATER_PUMP:RUN_SECONDS:";
         }
 
         public static class WebUI
@@ -52,6 +65,17 @@ namespace uart_com.Constants
           public const string UPDATE_WATER_LEVEL = "onSensorUpdate:WATER_LEVEL";
           /* Soil Moisture Data */
           public const string UPDATE_SOIL_MOISTURE = "onSensorUpdate:SOIL_MOISTURE";
+
+          /* Actuator Updates */
+          public const string UPDATE_EXHAUST_FAN = "onActuatorUpdate:EXHAUST_FAN";
+          public const string UPDATE_WATER_PUMP = "onActuatorUpdate:WATER_PUMP";
+
+          /* Actuator Acknowledgements */
+          public const string ACK_EXHAUST_FAN = "onActuatorAck:EXHAUST_FAN";
+          public const string ACK_WATER_PUMP = "onActuatorAck:WATER_PUMP";
+
+          /* Generic Command Ack */
+          public const string COMMAND_ACKNOWLEDGED = "CommandAcknowledged";
         }
 
       }

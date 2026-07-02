@@ -38,6 +38,42 @@ class SignalRService {
       console.warn("Cannot send command, SignalR is disconnected.");
     }
   }
+
+  public async turnExhaustFanOn() {
+    if (this.connection.state === signalR.HubConnectionState.Connected) {
+      try {
+        await this.connection.invoke("TurnExhaustFanOn");
+      } catch (err) {
+        console.error("Error turning exhaust fan on:", err);
+      }
+    } else {
+      console.warn("Cannot send command, SignalR is disconnected.");
+    }
+  }
+
+  public async turnExhaustFanOff() {
+    if (this.connection.state === signalR.HubConnectionState.Connected) {
+      try {
+        await this.connection.invoke("TurnExhaustFanOff");
+      } catch (err) {
+        console.error("Error turning exhaust fan off:", err);
+      }
+    } else {
+      console.warn("Cannot send command, SignalR is disconnected.");
+    }
+  }
+
+  public async runWaterPump(seconds: number) {
+    if (this.connection.state === signalR.HubConnectionState.Connected) {
+      try {
+        await this.connection.invoke("RunWaterPump", seconds);
+      } catch (err) {
+        console.error("Error triggering water pump:", err);
+      }
+    } else {
+      console.warn("Cannot send command, SignalR is disconnected.");
+    }
+  }
 }
 
 export const signalRService = new SignalRService();

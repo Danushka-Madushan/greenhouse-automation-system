@@ -19,7 +19,9 @@ builder.Services.AddCors(options =>
 });
 
 /* Register our Hardware Worker as a background hosted service */
-builder.Services.AddHostedService<HardwareWorker>();
+builder.Services.AddSingleton<HardwareWorker>();
+builder.Services.AddSingleton<IHardwareCommandBridge>(sp => sp.GetRequiredService<HardwareWorker>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<HardwareWorker>());
 builder.Services.AddSingleton<GreenhouseState>();
 
 var app = builder.Build();
