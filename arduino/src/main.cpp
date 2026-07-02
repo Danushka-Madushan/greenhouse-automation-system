@@ -6,6 +6,8 @@
 #define DHTTYPE DHT22
 
 #define LDR_PIN A0
+/* Soil Moisture v1.2 Analog */
+#define MOISTURE_PIN A1
 
 #define ECHO_PIN 3
 #define TRIG_PIN 4
@@ -29,18 +31,34 @@ const unsigned long ldr_readInterval = 1000; // Read every 1000ms (1 second)
 unsigned long ultrasonic_lastReadTime = 0;
 const unsigned long ultrasonic_readInterval = 1000; // Read every 1000ms (1 second)
 
+unsigned long moisture_lastReadTime = 0;
+const int DRY_VALUE = 461;
+const int WET_VALUE = 150;
+const unsigned long moisture_readInterval = 1000; // Read every 1000ms (1 second)
+
 /* Emit Data Interval */
 unsigned long previousEmitMillis = 0;
 const long emitInterval = 500; // Interval at which to send data (milliseconds)
 bool isConnected = false;
 
+/* Actuator Pins */
+#define RELAY_WATER_PUMP 5
+#define RELAY_FAN 6
+
 void setup()
 {
   Serial.begin(9600);
   pinMode(LDR_PIN, INPUT);
+  pinMode(MOISTURE_PIN, INPUT);
 
   pinMode(ECHO_PIN, INPUT);
   pinMode(TRIG_PIN, OUTPUT);
+
+  /* Close on Start */
+  digitalWrite(RELAY_WATER_PUMP, HIGH);
+  pinMode(RELAY_WATER_PUMP, OUTPUT);
+  digitalWrite(RELAY_FAN, HIGH);
+  pinMode(RELAY_FAN, OUTPUT);
 
   /* Ensure trigger pin starts clean */
   digitalWrite(TRIG_PIN, LOW);
@@ -69,6 +87,24 @@ void loop()
 
     if (handler != nullptr)
     {
+      /* Read Soil Moisture */
+
+      if (currentMillis - moisture_lastReadTime >= moisture_readInterval)
+      {
+        moisture_lastReadTime = currentMillis;
+
+        /* Read the raw analog value (0 - 1023) */
+        int rawAnalog = analogRead(MOISTURE_PIN);
+        int moisturePercent = map(rawAnalog, DRY_VALUE, WET_VALUE, 0, 100);
+        moisturePercent = constrain(moisturePercent, 0, 100);
+
+        /* Emit soil moisture data */
+        if (Serial.availableForWrite())
+        {
+          handler->emitSoilMoisture(moisturePercent);
+        }
+      }
+
       /* Read distance from ultrasonic sensor */
       if (currentMillis - ultrasonic_lastReadTime >= ultrasonic_readInterval)
       {

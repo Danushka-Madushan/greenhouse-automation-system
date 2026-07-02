@@ -204,6 +204,11 @@ public class HardwareWorker(
                         /* Example: "STATUS:WATER_LEVEL:85.0" */
                         await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_WATER_LEVEL, line, cancellationToken: stoppingToken);
                     }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.SOIL_MOISTURE_DATA_DYN))
+                    {
+                        /* Example: "STATUS:SOIL_MOISTURE:65" */
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_SOIL_MOISTURE, line, cancellationToken: stoppingToken);
+                    }
                 }
             }
             catch (TimeoutException)

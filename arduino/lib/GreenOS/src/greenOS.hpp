@@ -20,6 +20,7 @@ namespace GreenOS
     void emitTemperatureHumidity(float temperature, float humidity);
     void emitDH22Error(const String &errorMessage);
     void emitWaterLevel(float waterLevel);
+    void emitSoilMoisture(int rawAnalog);
   };
 
   class Ultrasonic

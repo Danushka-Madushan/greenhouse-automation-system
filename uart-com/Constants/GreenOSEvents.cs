@@ -16,6 +16,8 @@ namespace uart_com.Constants
           public const string LIGHT_INTENSITY_DATA_DYN = "STATUS:LIGHT_INTENSITY:";
           /* Water Level Data */
           public const string WATER_LEVEL_DATA_DYN = "STATUS:WATER_LEVEL:";
+          /* Soil Moisture Data */
+          public const string SOIL_MOISTURE_DATA_DYN = "STATUS:SOIL_MOISTURE:";
 
           /* System Check */
           public const string GREENHOUSE_UNO = "SYS:GREENHOUSE_UNO";
@@ -48,6 +50,8 @@ namespace uart_com.Constants
           public const string TEMP_HUMIDITY_ERROR = "onSensorError:TEMP_HUMIDITY";
           /* Water Level Data */
           public const string UPDATE_WATER_LEVEL = "onSensorUpdate:WATER_LEVEL";
+          /* Soil Moisture Data */
+          public const string UPDATE_SOIL_MOISTURE = "onSensorUpdate:SOIL_MOISTURE";
         }
 
       }

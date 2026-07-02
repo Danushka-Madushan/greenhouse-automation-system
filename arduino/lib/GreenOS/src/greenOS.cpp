@@ -41,3 +41,11 @@ void EventHandler::emitWaterLevel(float waterLevel)
   String event = String(Events::Emit::WATER_LEVEL_DATA_DYN) + data;
   serial->println(event);
 }
+
+void EventHandler::emitSoilMoisture(int rawAnalog)
+{
+  String data = String(rawAnalog);
+  /* Since we dont have 4 sensors we are mimicing 4 sensors to one */
+  String event = String(Events::Emit::SOIL_MOISTURE_DATA_DYN) + data + "," + data + "," + data + "," + data;
+  serial->println(event);
+}

@@ -111,6 +111,14 @@ const App = () => {
       setHumidity(humidity)
     })
 
+    signalRService.connection.on('onSensorUpdate:SOIL_MOISTURE', (data: string) => {
+      const { sector1, sector2, sector3, sector4 } = Parser.parseSoilMoisture(data)
+      setSector1(sector1)
+      setSector2(sector2)
+      setSector3(sector3)
+      setSector4(sector4)
+    })
+
     signalRService.connection.on('onSensorError:TEMP_HUMIDITY', (data: string) => {
       console.log('Received error from C#:', data)
       setTemperature(0)
