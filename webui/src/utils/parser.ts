@@ -10,6 +10,14 @@ export class Parser {
     };
   };
 
+  public static parseWaterLevel: (statusStr: string) => number = (statusStr) => {
+    // 1. Get everything after the last colon
+    const waterLevel = statusStr.split(':').pop();
+
+    // 2. Convert string to number and return
+    return waterLevel ? parseFloat(waterLevel) : 0;
+  };
+
   public static parseLightIntensity: (statusStr: string) => number = (statusStr) => {
     // 1. Get everything after the last colon
     const lightLevel = statusStr.split(':').pop();

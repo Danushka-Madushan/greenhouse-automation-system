@@ -34,3 +34,10 @@ void EventHandler::emitDH22Error(const String &errorMessage)
   String event = String(Events::Emit::ERROR_DH22_MSG_DYN) + errorMessage;
   serial->println(event);
 }
+
+void EventHandler::emitWaterLevel(float waterLevel)
+{
+  String data = String(waterLevel, 1);
+  String event = String(Events::Emit::WATER_LEVEL_DATA_DYN) + data;
+  serial->println(event);
+}

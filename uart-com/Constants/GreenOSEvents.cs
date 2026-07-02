@@ -14,6 +14,8 @@ namespace uart_com.Constants
           public const string ERROR_DHT22_MSG_DYN = "ERR:SENSOR_DH22:";
           /* Light Intensity Data */
           public const string LIGHT_INTENSITY_DATA_DYN = "STATUS:LIGHT_INTENSITY:";
+          /* Water Level Data */
+          public const string WATER_LEVEL_DATA_DYN = "STATUS:WATER_LEVEL:";
 
           /* System Check */
           public const string GREENHOUSE_UNO = "SYS:GREENHOUSE_UNO";
@@ -44,6 +46,8 @@ namespace uart_com.Constants
           public const string UPDATE_LIGHT_INTENSITY = "onSensorUpdate:LIGHT_INTENSITY";
           /* Sensor Errors */
           public const string TEMP_HUMIDITY_ERROR = "onSensorError:TEMP_HUMIDITY";
+          /* Water Level Data */
+          public const string UPDATE_WATER_LEVEL = "onSensorUpdate:WATER_LEVEL";
         }
 
       }

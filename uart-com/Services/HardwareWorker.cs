@@ -199,6 +199,11 @@ public class HardwareWorker(
                         /* Example: "STATUS:LIGHT_INTENSITY:75.3" */
                         await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_LIGHT_INTENSITY, line, cancellationToken: stoppingToken);
                     }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.WATER_LEVEL_DATA_DYN))
+                    {
+                        /* Example: "STATUS:WATER_LEVEL:85.0" */
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_WATER_LEVEL, line, cancellationToken: stoppingToken);
+                    }
                 }
             }
             catch (TimeoutException)

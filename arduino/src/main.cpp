@@ -4,19 +4,31 @@
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
+
 #define LDR_PIN A0
+
+#define ECHO_PIN 3
+#define TRIG_PIN 4
 
 using namespace GreenOS;
 
-/*  Declare a global pointer initialized to nullptr for EventHandler */
+/*  Declare a global pointer initialized to nullptr for EventHandler & Ultrasonic */
 EventHandler *handler = nullptr;
+Ultrasonic *ultrasonic = nullptr;
 /*  Declare the DHT22 / AM2302 Module sensor object */
 DHT dht(DHTPIN, DHTTYPE);
+
 /* Timing variables for non-blocking execution */
 unsigned long dht_lastReadTime = 0;
 const unsigned long dht_readInterval = 2000; // Read every 2000ms (2 seconds)
+
 unsigned long ldr_lastReadTime = 0;
 const unsigned long ldr_readInterval = 1000; // Read every 1000ms (1 second)
+
+/* Timing variables for non-blocking execution */
+unsigned long ultrasonic_lastReadTime = 0;
+const unsigned long ultrasonic_readInterval = 1000; // Read every 1000ms (1 second)
+
 /* Emit Data Interval */
 unsigned long previousEmitMillis = 0;
 const long emitInterval = 500; // Interval at which to send data (milliseconds)
@@ -26,8 +38,16 @@ void setup()
 {
   Serial.begin(9600);
   pinMode(LDR_PIN, INPUT);
-  /* Instantiate the EventHandler safely now, when the Serial is ready */
+
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(TRIG_PIN, OUTPUT);
+
+  /* Ensure trigger pin starts clean */
+  digitalWrite(TRIG_PIN, LOW);
+
+  /* Instantiate the EventHandler & Ultrasonic sensors safely now, when the Serial is ready */
   handler = new EventHandler(&Serial);
+  ultrasonic = new Ultrasonic(TRIG_PIN, ECHO_PIN);
   dht.begin();
 }
 
@@ -49,6 +69,22 @@ void loop()
 
     if (handler != nullptr)
     {
+      /* Read distance from ultrasonic sensor */
+      if (currentMillis - ultrasonic_lastReadTime >= ultrasonic_readInterval)
+      {
+        ultrasonic_lastReadTime = currentMillis;
+
+        /* Read distance in centimeters */
+        float distanceCM = ultrasonic->getFilteredDistance(10);
+        float waterLevelPercent = ultrasonic->calculatePercentage(distanceCM);
+
+        /* Emit distance data */
+        if (Serial.availableForWrite())
+        {
+          handler->emitWaterLevel(waterLevelPercent);
+        }
+      }
+
       /* Read light intensity */
       if (currentMillis - ldr_lastReadTime >= ldr_readInterval)
       {

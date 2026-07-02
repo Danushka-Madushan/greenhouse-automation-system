@@ -12,6 +12,7 @@ import FloatingSimulatorToggle from './components/FloatingSimulatorToggle'
 import FloatingSettingsToggle from './components/FloatingSettingsToggle'
 import Nav from './components/Nav'
 import { toast } from '@heroui/react/toast'
+import { OfflineOverlay } from './components/OfflineOverlay'
 
 /* Types */
 type TabId = 'dashboard' | 'analytics'
@@ -99,6 +100,11 @@ const App = () => {
       setLightLevel(lightLevel)
     })
 
+    signalRService.connection.on('onSensorUpdate:WATER_LEVEL', (data: string) => {
+      const waterLevel = Parser.parseWaterLevel(data)
+      setWaterLevel(waterLevel)
+    })
+
     signalRService.connection.on('onSensorUpdate:TEMP_HUMIDITY', (data: string) => {
       const { temperature, humidity } = Parser.parseTempHumidity(data)
       setTemperature(temperature)
@@ -121,6 +127,7 @@ const App = () => {
     return () => {
       signalRService.connection.off('onSensorUpdate:TEMP_HUMIDITY')
       signalRService.connection.off('onSensorUpdate:LIGHT_INTENSITY')
+      signalRService.connection.off('onSensorUpdate:WATER_LEVEL')
       signalRService.connection.off('onSensorError:TEMP_HUMIDITY')
       signalRService.connection.off('CommandAcknowledged')
       signalRService.connection.off('SYS:ONLINE')
@@ -133,6 +140,9 @@ const App = () => {
       className="min-h-screen"
       style={{ backgroundColor: 'var(--color-md-surface)', color: 'var(--color-md-on-surface)' }}
     >
+
+      {/* Offline Gate - renders above everything, blocks all interaction */}
+      <OfflineOverlay isConnected={isConnected} />
 
       {/* TOP APP BAR - logo · tabs · status */}
       <Nav activeTab={activeTab} setActiveTab={setActiveTab} isConnected={isConnected} />

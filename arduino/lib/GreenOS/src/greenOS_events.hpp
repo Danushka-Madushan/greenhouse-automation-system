@@ -27,6 +27,8 @@ namespace GreenOS
       const char* const ERROR_DH22_MSG_DYN PROGMEM = "ERR:SENSOR_DH22:";
       /* Light Intensity Data */
       const char* const LIGHT_INTENSITY_DATA_DYN PROGMEM = "STATUS:LIGHT_INTENSITY:";
+      /* Water Level Data */
+      const char* const WATER_LEVEL_DATA_DYN PROGMEM = "STATUS:WATER_LEVEL:";
     }
   }
 }
