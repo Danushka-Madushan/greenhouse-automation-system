@@ -13,6 +13,11 @@
 #define ECHO_PIN 3
 #define TRIG_PIN 4
 
+/* Actuator Pins */
+#define RELAY_WATER_PUMP 5
+#define RELAY_FAN 6
+#define RELAY_REFILL_PUMP 8
+
 using namespace GreenOS;
 
 /*  Declare a global pointer initialized to nullptr for EventHandler & Ultrasonic */
@@ -46,10 +51,6 @@ bool isConnected = false;
 bool isExhaustFanOn = false;
 bool isWaterPumpRunning = false;
 unsigned long waterPumpRunUntilMillis = 0;
-
-/* Actuator Pins */
-#define RELAY_WATER_PUMP 5
-#define RELAY_FAN 6
 
 /* Relay module is active-low: LOW = ON, HIGH = OFF */
 void applyActuatorState()
