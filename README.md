@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/Danushka-Madushan/greenhouse-automation-system/refs/heads/main/webui/public/favicon.svg" width="80" height="80" alt="GreenOS Logo" />
 
-# GreenOS — Greenhouse Automation System
+# GreenOS - Greenhouse Automation System
 
 An affordable, Arduino-powered greenhouse automation solution with real-time remote monitoring, intelligent autonomous control, and cloud analytics.
 
