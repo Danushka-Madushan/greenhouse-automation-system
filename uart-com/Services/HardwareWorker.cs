@@ -249,6 +249,29 @@ public class HardwareWorker(
                         await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.ACK_WATER_PUMP, line, cancellationToken: stoppingToken);
                         await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.COMMAND_ACKNOWLEDGED, line, cancellationToken: stoppingToken);
                     }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.REFILL_PUMP_STATUS_DYN))
+                    {
+                        _greenhouseState.IsRefillPumpRunning = line.EndsWith("ON", StringComparison.OrdinalIgnoreCase);
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_REFILL_PUMP, line, cancellationToken: stoppingToken);
+                    }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.REFILL_PUMP_ACK_DYN))
+                    {
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.ACK_REFILL_PUMP, line, cancellationToken: stoppingToken);
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.COMMAND_ACKNOWLEDGED, line, cancellationToken: stoppingToken);
+                    }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.MODE_STATUS_DYN))
+                    {
+                        string modeStr = line[GreenOS.Events.Incoming.Ardiono.MODE_STATUS_DYN.Length..].Trim();
+                        _greenhouseState.CurrentMode = modeStr.Equals("AUTO", StringComparison.OrdinalIgnoreCase)
+                            ? OperatingMode.Auto
+                            : OperatingMode.Manual;
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_MODE, line, cancellationToken: stoppingToken);
+                    }
+                    else if (line.StartsWith(GreenOS.Events.Incoming.Ardiono.MODE_ACK_DYN))
+                    {
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.ACK_MODE, line, cancellationToken: stoppingToken);
+                        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.COMMAND_ACKNOWLEDGED, line, cancellationToken: stoppingToken);
+                    }
                 }
             }
             catch (TimeoutException)
@@ -318,8 +341,18 @@ public class HardwareWorker(
             ? $"{GreenOS.Events.Incoming.Ardiono.WATER_PUMP_STATUS_DYN}RUNNING:{_greenhouseState.WaterPumpRemainingSeconds}"
             : $"{GreenOS.Events.Incoming.Ardiono.WATER_PUMP_STATUS_DYN}OFF";
 
+        string refillStatus = _greenhouseState.IsRefillPumpRunning
+            ? $"{GreenOS.Events.Incoming.Ardiono.REFILL_PUMP_STATUS_DYN}ON"
+            : $"{GreenOS.Events.Incoming.Ardiono.REFILL_PUMP_STATUS_DYN}OFF";
+
+        string modeStatus = _greenhouseState.CurrentMode == OperatingMode.Auto
+            ? $"{GreenOS.Events.Incoming.Ardiono.MODE_STATUS_DYN}AUTO"
+            : $"{GreenOS.Events.Incoming.Ardiono.MODE_STATUS_DYN}MANUAL";
+
         await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_EXHAUST_FAN, fanStatus, cancellationToken: cancellationToken);
         await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_WATER_PUMP, pumpStatus, cancellationToken: cancellationToken);
+        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_REFILL_PUMP, refillStatus, cancellationToken: cancellationToken);
+        await _hubContext.Clients.All.SendAsync(GreenOS.Events.Emit.WebUI.UPDATE_MODE, modeStatus, cancellationToken: cancellationToken);
     }
 
     public override void Dispose()
