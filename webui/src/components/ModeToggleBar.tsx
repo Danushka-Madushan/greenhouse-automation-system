@@ -1,4 +1,7 @@
-import { Cpu, Hand, Leaf, Zap } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Cpu, Hand, Leaf, Timer, Zap } from 'lucide-react'
+
+const MODE_COOLDOWN_SECS = 5
 
 interface ModeToggleBarProps {
   mode: 'MANUAL' | 'AUTO'
@@ -9,6 +12,33 @@ interface ModeToggleBarProps {
 
 export const ModeToggleBar = ({ mode, isConnected, onSetAuto, onSetManual }: ModeToggleBarProps) => {
   const isAuto = mode === 'AUTO'
+
+  /* ── Cooldown State ───────────────────────────────────── */
+  const [cooldownRemaining, setCooldownRemaining] = useState(0)
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const startCooldown = () => {
+    if (cooldownRef.current) clearInterval(cooldownRef.current)
+    setCooldownRemaining(MODE_COOLDOWN_SECS)
+    cooldownRef.current = setInterval(() => {
+      setCooldownRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!)
+          cooldownRef.current = null
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current) }, [])
+
+  const isCoolingDown = cooldownRemaining > 0
+  const buttonsDisabled = !isConnected || isCoolingDown
+
+  const handleSetAuto = () => { onSetAuto(); startCooldown() }
+  const handleSetManual = () => { onSetManual(); startCooldown() }
 
   return (
     <div
@@ -44,7 +74,7 @@ export const ModeToggleBar = ({ mode, isConnected, onSetAuto, onSetManual }: Mod
               {isAuto ? 'Autonomous Mode' : 'Manual Mode'}
             </span>
             {/* Live pulse indicator for AUTO */}
-            {isAuto && (
+            {isAuto && !isCoolingDown && (
               <span className="relative flex h-2.5 w-2.5">
                 <span
                   className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
@@ -61,18 +91,20 @@ export const ModeToggleBar = ({ mode, isConnected, onSetAuto, onSetManual }: Mod
             className="text-xs mt-0.5"
             style={{ color: isAuto ? 'var(--color-md-on-primary-container)' : 'var(--color-md-on-surface-variant)' }}
           >
-            {isAuto
-              ? 'Arduino managing fan, water pump & refill autonomously'
-              : 'All actuators controlled manually via this panel'}
+            {isCoolingDown
+              ? 'Staging mode change...'
+              : isAuto
+                ? 'Arduino managing fan, water pump & refill autonomously'
+                : 'All actuators controlled manually via this panel'}
           </p>
         </div>
       </div>
 
-      {/* Right: Toggle + Status chips */}
+      {/* Right: Status chips + Cooldown + Toggle */}
       <div className="flex items-center gap-3 shrink-0">
 
-        {/* Auto mode status chips */}
-        {isAuto && (
+        {/* Auto mode status chips (hidden during cooldown) */}
+        {isAuto && !isCoolingDown && (
           <div className="hidden sm:flex items-center gap-2">
             <div
               className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
@@ -91,15 +123,29 @@ export const ModeToggleBar = ({ mode, isConnected, onSetAuto, onSetManual }: Mod
           </div>
         )}
 
+        {/* Cooldown badge */}
+        {isCoolingDown && (
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
+            style={{
+              backgroundColor: 'var(--color-md-secondary-container)',
+              color: 'var(--color-md-on-secondary-container)',
+            }}
+          >
+            <Timer className="size-3.5" />
+            <span>Wait {cooldownRemaining}s</span>
+          </div>
+        )}
+
         {/* Toggle pill */}
         <div
           className="flex items-center gap-0 rounded-xl p-1"
           style={{ backgroundColor: isAuto ? 'var(--color-md-primary)30' : 'var(--color-md-surface-container-high)' }}
         >
           <button
-            onClick={onSetManual}
-            disabled={!isConnected}
-            className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 disabled:opacity-40"
+            onClick={handleSetManual}
+            disabled={buttonsDisabled}
+            className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
               backgroundColor: !isAuto ? 'var(--color-md-surface-container-highest)' : 'transparent',
               color: !isAuto ? 'var(--color-md-on-surface)' : 'var(--color-md-on-surface-variant)',
@@ -109,9 +155,9 @@ export const ModeToggleBar = ({ mode, isConnected, onSetAuto, onSetManual }: Mod
             MANUAL
           </button>
           <button
-            onClick={onSetAuto}
-            disabled={!isConnected}
-            className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 disabled:opacity-40"
+            onClick={handleSetAuto}
+            disabled={buttonsDisabled}
+            className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
               backgroundColor: isAuto ? 'var(--color-md-primary)' : 'transparent',
               color: isAuto ? 'var(--color-md-on-primary)' : 'var(--color-md-on-surface-variant)',
