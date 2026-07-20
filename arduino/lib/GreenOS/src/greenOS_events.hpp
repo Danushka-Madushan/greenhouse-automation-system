@@ -13,37 +13,53 @@ namespace GreenOS
     namespace Incoming
     {
       /* System Check Event */
-      const char* const WHOAMI PROGMEM = "SYS:WHOAMI";
+      const char *const WHOAMI PROGMEM = "SYS:WHOAMI";
 
       /* Actuator Commands */
-      const char* const EXHAUST_FAN_ON PROGMEM = "CMD:EXHAUST_FAN:ON";
-      const char* const EXHAUST_FAN_OFF PROGMEM = "CMD:EXHAUST_FAN:OFF";
-      const char* const WATER_PUMP_RUN_SECONDS_DYN PROGMEM = "CMD:WATER_PUMP:RUN_SECONDS:";
+      const char *const EXHAUST_FAN_ON PROGMEM = "CMD:EXHAUST_FAN:ON";
+      const char *const EXHAUST_FAN_OFF PROGMEM = "CMD:EXHAUST_FAN:OFF";
+      const char *const WATER_PUMP_RUN_SECONDS_DYN PROGMEM = "CMD:WATER_PUMP:RUN_SECONDS:";
+
+      /* Refill Pump Commands */
+      const char *const REFILL_PUMP_ON PROGMEM = "CMD:REFILL_PUMP:ON";
+      const char *const REFILL_PUMP_OFF PROGMEM = "CMD:REFILL_PUMP:OFF";
+
+      /* Operating Mode Commands */
+      const char *const MODE_AUTO PROGMEM = "CMD:MODE:AUTO";
+      const char *const MODE_MANUAL PROGMEM = "CMD:MODE:MANUAL";
     }
 
     /* Outgoing Events */
     namespace Emit
     {
       /* System Check Response */
-      const char* const GREENHOUSE_UNO PROGMEM = "SYS:GREENHOUSE_UNO";
+      const char *const GREENHOUSE_UNO PROGMEM = "SYS:GREENHOUSE_UNO";
       /* Temperature and Humidity Data */
-      const char* const TEMP_HUMIDITY_DATA_DYN PROGMEM = "STATUS:TEMP_HUMIDITY:";
+      const char *const TEMP_HUMIDITY_DATA_DYN PROGMEM = "STATUS:TEMP_HUMIDITY:";
       /* Error */
-      const char* const ERROR_DH22_MSG_DYN PROGMEM = "ERR:SENSOR_DH22:";
+      const char *const ERROR_DH22_MSG_DYN PROGMEM = "ERR:SENSOR_DH22:";
       /* Light Intensity Data */
-      const char* const LIGHT_INTENSITY_DATA_DYN PROGMEM = "STATUS:LIGHT_INTENSITY:";
+      const char *const LIGHT_INTENSITY_DATA_DYN PROGMEM = "STATUS:LIGHT_INTENSITY:";
       /* Water Level Data */
-      const char* const WATER_LEVEL_DATA_DYN PROGMEM = "STATUS:WATER_LEVEL:";
+      const char *const WATER_LEVEL_DATA_DYN PROGMEM = "STATUS:WATER_LEVEL:";
       /* Soil Moisture Data */
-      const char* const SOIL_MOISTURE_DATA_DYN PROGMEM = "STATUS:SOIL_MOISTURE:";
+      const char *const SOIL_MOISTURE_DATA_DYN PROGMEM = "STATUS:SOIL_MOISTURE:";
 
       /* Actuator Status Updates */
-      const char* const EXHAUST_FAN_STATUS_DYN PROGMEM = "STATUS:EXHAUST_FAN:";
-      const char* const WATER_PUMP_STATUS_DYN PROGMEM = "STATUS:WATER_PUMP:";
+      const char *const EXHAUST_FAN_STATUS_DYN PROGMEM = "STATUS:EXHAUST_FAN:";
+      const char *const WATER_PUMP_STATUS_DYN PROGMEM = "STATUS:WATER_PUMP:";
 
       /* Actuator Acknowledgements */
-      const char* const EXHAUST_FAN_ACK_DYN PROGMEM = "ACK:EXHAUST_FAN:";
-      const char* const WATER_PUMP_ACK_DYN PROGMEM = "ACK:WATER_PUMP:";
+      const char *const EXHAUST_FAN_ACK_DYN PROGMEM = "ACK:EXHAUST_FAN:";
+      const char *const WATER_PUMP_ACK_DYN PROGMEM = "ACK:WATER_PUMP:";
+      const char *const REFILL_PUMP_ACK_DYN PROGMEM = "ACK:REFILL_PUMP:";
+      const char *const MODE_ACK_DYN PROGMEM = "ACK:MODE:";
+
+      /* Refill Pump Status */
+      const char *const REFILL_PUMP_STATUS_DYN PROGMEM = "STATUS:REFILL_PUMP:";
+
+      /* Operating Mode Status */
+      const char *const MODE_STATUS_DYN PROGMEM = "STATUS:MODE:";
     }
   }
 }
