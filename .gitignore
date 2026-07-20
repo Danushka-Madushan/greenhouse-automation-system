@@ -1,1 +1,6 @@
 .agents/
+
+# Environment variables — never commit real credentials
+webui/.env
+webui/.env.local
+webui/.env.*.local
