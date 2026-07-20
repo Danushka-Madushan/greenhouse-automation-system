@@ -22,10 +22,14 @@ namespace uart_com.Constants
           /* Actuator Status Updates */
           public const string EXHAUST_FAN_STATUS_DYN = "STATUS:EXHAUST_FAN:";
           public const string WATER_PUMP_STATUS_DYN = "STATUS:WATER_PUMP:";
+          public const string REFILL_PUMP_STATUS_DYN = "STATUS:REFILL_PUMP:";
+          public const string MODE_STATUS_DYN = "STATUS:MODE:";
 
           /* Actuator Acknowledgements */
           public const string EXHAUST_FAN_ACK_DYN = "ACK:EXHAUST_FAN:";
           public const string WATER_PUMP_ACK_DYN = "ACK:WATER_PUMP:";
+          public const string REFILL_PUMP_ACK_DYN = "ACK:REFILL_PUMP:";
+          public const string MODE_ACK_DYN = "ACK:MODE:";
 
           /* System Check */
           public const string GREENHOUSE_UNO = "SYS:GREENHOUSE_UNO";
@@ -48,6 +52,14 @@ namespace uart_com.Constants
           public const string TURN_EXHAUST_FAN_ON = "CMD:EXHAUST_FAN:ON\n";
           public const string TURN_EXHAUST_FAN_OFF = "CMD:EXHAUST_FAN:OFF\n";
           public const string RUN_WATER_PUMP_SECONDS_DYN = "CMD:WATER_PUMP:RUN_SECONDS:";
+
+          /* Refill Pump Commands */
+          public const string REFILL_PUMP_ON = "CMD:REFILL_PUMP:ON\n";
+          public const string REFILL_PUMP_OFF = "CMD:REFILL_PUMP:OFF\n";
+
+          /* Operating Mode Commands */
+          public const string SET_MODE_AUTO = "CMD:MODE:AUTO\n";
+          public const string SET_MODE_MANUAL = "CMD:MODE:MANUAL\n";
         }
 
         public static class WebUI
@@ -69,10 +81,14 @@ namespace uart_com.Constants
           /* Actuator Updates */
           public const string UPDATE_EXHAUST_FAN = "onActuatorUpdate:EXHAUST_FAN";
           public const string UPDATE_WATER_PUMP = "onActuatorUpdate:WATER_PUMP";
+          public const string UPDATE_REFILL_PUMP = "onActuatorUpdate:REFILL_PUMP";
+          public const string UPDATE_MODE = "onModeUpdate";
 
           /* Actuator Acknowledgements */
           public const string ACK_EXHAUST_FAN = "onActuatorAck:EXHAUST_FAN";
           public const string ACK_WATER_PUMP = "onActuatorAck:WATER_PUMP";
+          public const string ACK_REFILL_PUMP = "onActuatorAck:REFILL_PUMP";
+          public const string ACK_MODE = "onModeAck";
 
           /* Generic Command Ack */
           public const string COMMAND_ACKNOWLEDGED = "CommandAcknowledged";
