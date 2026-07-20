@@ -26,7 +26,7 @@ class SignalRService {
     }
   }
 
-  // Emit a command from React to C#
+  // Emit a raw command from React to C#
   public async sendArduinoCommand(command: string) {
     if (this.connection.state === signalR.HubConnectionState.Connected) {
       try {
@@ -38,6 +38,8 @@ class SignalRService {
       console.warn("Cannot send command, SignalR is disconnected.");
     }
   }
+
+  /* ── Exhaust Fan ───────────────────────────────────── */
 
   public async turnExhaustFanOn() {
     if (this.connection.state === signalR.HubConnectionState.Connected) {
@@ -63,12 +65,66 @@ class SignalRService {
     }
   }
 
+  /* ── Water Pump ────────────────────────────────────── */
+
   public async runWaterPump(seconds: number) {
     if (this.connection.state === signalR.HubConnectionState.Connected) {
       try {
         await this.connection.invoke("RunWaterPump", seconds);
       } catch (err) {
         console.error("Error triggering water pump:", err);
+      }
+    } else {
+      console.warn("Cannot send command, SignalR is disconnected.");
+    }
+  }
+
+  /* ── Refill Pump ───────────────────────────────────── */
+
+  public async turnRefillPumpOn() {
+    if (this.connection.state === signalR.HubConnectionState.Connected) {
+      try {
+        await this.connection.invoke("TurnRefillPumpOn");
+      } catch (err) {
+        console.error("Error turning refill pump on:", err);
+      }
+    } else {
+      console.warn("Cannot send command, SignalR is disconnected.");
+    }
+  }
+
+  public async turnRefillPumpOff() {
+    if (this.connection.state === signalR.HubConnectionState.Connected) {
+      try {
+        await this.connection.invoke("TurnRefillPumpOff");
+      } catch (err) {
+        console.error("Error turning refill pump off:", err);
+      }
+    } else {
+      console.warn("Cannot send command, SignalR is disconnected.");
+    }
+  }
+
+  /* ── Operating Mode ────────────────────────────────── */
+
+  public async setAutoMode() {
+    if (this.connection.state === signalR.HubConnectionState.Connected) {
+      try {
+        await this.connection.invoke("SetAutoMode");
+      } catch (err) {
+        console.error("Error setting auto mode:", err);
+      }
+    } else {
+      console.warn("Cannot send command, SignalR is disconnected.");
+    }
+  }
+
+  public async setManualMode() {
+    if (this.connection.state === signalR.HubConnectionState.Connected) {
+      try {
+        await this.connection.invoke("SetManualMode");
+      } catch (err) {
+        console.error("Error setting manual mode:", err);
       }
     } else {
       console.warn("Cannot send command, SignalR is disconnected.");
