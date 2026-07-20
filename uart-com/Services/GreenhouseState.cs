@@ -1,10 +1,18 @@
 namespace uart_com.Services;
 
+public enum OperatingMode
+{
+  Manual,
+  Auto
+}
+
 public class GreenhouseState
 {
   public bool IsBoardOnline { get; set; } = false;
   public bool IsExhaustFanOn { get; set; } = false;
   public bool IsWaterPumpRunning { get; set; } = false;
+  public bool IsRefillPumpRunning { get; set; } = false;
+  public OperatingMode CurrentMode { get; set; } = OperatingMode.Manual;
   public DateTime? WaterPumpRunUntilUtc { get; set; }
 
   public int WaterPumpRemainingSeconds
