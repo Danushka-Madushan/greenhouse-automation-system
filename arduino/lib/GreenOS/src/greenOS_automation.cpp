@@ -114,7 +114,13 @@ bool AutomationController::update(float moisture, float waterLevel, float temper
   }
 
   /* ── Water Pump ──────────────────────────────────────── */
-  if (!_waterPumpOn && moisture < AUTO_MOISTURE_LOW)
+  /* Priority: if the tank is low OR the refill pump is actively
+   * filling, skip irrigation entirely — there is no point running
+   * the water pump dry.  Once the tank reaches AUTO_WATER_TANK_LOW
+   * + hysteresis the refill pump will stop and irrigation can resume
+   * on the very next update() cycle. */
+  bool tankSufficientForIrrigation = (waterLevel >= AUTO_WATER_TANK_LOW) && !_refillPumpOn;
+  if (!_waterPumpOn && moisture < AUTO_MOISTURE_LOW && tankSufficientForIrrigation)
   {
     unsigned long elapsed = currentMillis - _waterPumpLastTriggerMs;
     if (elapsed >= WATER_PUMP_COOLDOWN_MS || _waterPumpLastTriggerMs == 0)
