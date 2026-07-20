@@ -1,17 +1,15 @@
-// src/firebase.js
+// src/services/firebase.ts
 import { initializeApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 
-// Your web app's Firebase configuration
-// For security, use environment variables (.env) for these values
 const firebaseConfig = {
-  apiKey: "AIzaSyCf4CMVLvep6G44Y0YZH-lmqdibgNsiowg",
-  authDomain: "nibm-greenos.firebaseapp.com",
-  projectId: "nibm-greenos",
-  storageBucket: "nibm-greenos.firebasestorage.app",
-  messagingSenderId: "174468721169",
-  appId: "1:174468721169:web:20c6cea595512022e29fb0",
-  databaseURL: "https://nibm-greenos-default-rtdb.asia-southeast1.firebasedatabase.app"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
 };
 
 // Initialize Firebase
