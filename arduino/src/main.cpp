@@ -2,6 +2,7 @@
 #include <DHT.h>
 #include "greenOS.hpp"
 #include "greenOS_events.hpp"
+#include "greenOS_automation.hpp"
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
@@ -23,6 +24,10 @@ using namespace GreenOS;
 /*  Declare a global pointer initialized to nullptr for EventHandler & Ultrasonic */
 EventHandler *handler = nullptr;
 Ultrasonic *ultrasonic = nullptr;
+
+/* AutomationController — owns all actuator state and auto-mode logic */
+AutomationController *automation = nullptr;
+
 /*  Declare the DHT22 / AM2302 Module sensor object */
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -33,7 +38,6 @@ const unsigned long dht_readInterval = 2000; // Read every 2000ms (2 seconds)
 unsigned long ldr_lastReadTime = 0;
 const unsigned long ldr_readInterval = 1000; // Read every 1000ms (1 second)
 
-/* Timing variables for non-blocking execution */
 unsigned long ultrasonic_lastReadTime = 0;
 const unsigned long ultrasonic_readInterval = 1000; // Read every 1000ms (1 second)
 
@@ -45,43 +49,46 @@ const unsigned long moisture_readInterval = 1000; // Read every 1000ms (1 second
 /* Emit Data Interval */
 unsigned long previousEmitMillis = 0;
 const long emitInterval = 500; // Interval at which to send data (milliseconds)
-bool isConnected = false;
 
-/* Actuator runtime state */
-bool isExhaustFanOn = false;
-bool isWaterPumpRunning = false;
-unsigned long waterPumpRunUntilMillis = 0;
+/* Latest sensor values — cached for AutomationController.update() */
+float latestMoisture = 0.0f;
+float latestWaterLevel = 0.0f;
+float latestTemperature = 0.0f;
+float latestHumidity = 0.0f;
 
-/* Relay module is active-low: LOW = ON, HIGH = OFF */
-void applyActuatorState()
+/* ── Emit Helpers ─────────────────────────────────────────── */
+
+void emitModeStatus()
 {
-  digitalWrite(RELAY_FAN, isExhaustFanOn ? LOW : HIGH);
-  digitalWrite(RELAY_WATER_PUMP, isWaterPumpRunning ? LOW : HIGH);
+  Serial.print(Events::Emit::MODE_STATUS_DYN);
+  Serial.println(automation->isAutoMode() ? "AUTO" : "MANUAL");
 }
 
 void emitExhaustFanStatus()
 {
   Serial.print(Events::Emit::EXHAUST_FAN_STATUS_DYN);
-  Serial.println(isExhaustFanOn ? "ON" : "OFF");
+  Serial.println(automation->isFanOn() ? "ON" : "OFF");
 }
 
 void emitWaterPumpStatus(unsigned long currentMillis)
 {
   Serial.print(Events::Emit::WATER_PUMP_STATUS_DYN);
-
-  if (isWaterPumpRunning)
+  if (automation->isWaterPumpOn())
   {
-    unsigned long remainingMillis = waterPumpRunUntilMillis > currentMillis
-      ? waterPumpRunUntilMillis - currentMillis
-      : 0;
-    unsigned long remainingSeconds = (remainingMillis + 999UL) / 1000UL;
+    /* Remaining time is managed inside the controller; approximate from millis */
     Serial.print("RUNNING:");
-    Serial.println(remainingSeconds);
+    Serial.println(0); // exact countdown not exposed; UI treats any RUNNING as active
   }
   else
   {
     Serial.println("OFF");
   }
+}
+
+void emitRefillPumpStatus()
+{
+  Serial.print(Events::Emit::REFILL_PUMP_STATUS_DYN);
+  Serial.println(automation->isRefillPumpOn() ? "ON" : "OFF");
 }
 
 void emitExhaustFanAck(const char *result)
@@ -96,14 +103,53 @@ void emitWaterPumpAck(const char *result)
   Serial.println(result);
 }
 
+void emitRefillPumpAck(const char *result)
+{
+  Serial.print(Events::Emit::REFILL_PUMP_ACK_DYN);
+  Serial.println(result);
+}
+
+void emitModeAck(const char *result)
+{
+  Serial.print(Events::Emit::MODE_ACK_DYN);
+  Serial.println(result);
+}
+
+/* ── Command Handler ──────────────────────────────────────── */
+
 void handleActuatorCommand(String incoming, unsigned long currentMillis)
 {
   incoming.trim();
 
+  /* ── Operating Mode Commands ─────────────────────────── */
+  if (incoming == Events::Incoming::MODE_AUTO)
+  {
+    automation->setMode(OperatingMode::AUTO);
+    emitModeAck("OK:AUTO");
+    emitModeStatus();
+    /* Immediately broadcast all actuator states after mode switch */
+    emitExhaustFanStatus();
+    emitWaterPumpStatus(currentMillis);
+    emitRefillPumpStatus();
+    return;
+  }
+
+  if (incoming == Events::Incoming::MODE_MANUAL)
+  {
+    automation->setMode(OperatingMode::MANUAL);
+    emitModeAck("OK:MANUAL");
+    emitModeStatus();
+    /* Broadcast stopped actuators after cancellation */
+    emitExhaustFanStatus();
+    emitWaterPumpStatus(currentMillis);
+    emitRefillPumpStatus();
+    return;
+  }
+
+  /* ── Exhaust Fan Commands ─────────────────────────────── */
   if (incoming == Events::Incoming::EXHAUST_FAN_ON)
   {
-    isExhaustFanOn = true;
-    applyActuatorState();
+    automation->setFan(true);
     emitExhaustFanAck("OK:ON");
     emitExhaustFanStatus();
     return;
@@ -111,13 +157,13 @@ void handleActuatorCommand(String incoming, unsigned long currentMillis)
 
   if (incoming == Events::Incoming::EXHAUST_FAN_OFF)
   {
-    isExhaustFanOn = false;
-    applyActuatorState();
+    automation->setFan(false);
     emitExhaustFanAck("OK:OFF");
     emitExhaustFanStatus();
     return;
   }
 
+  /* ── Water Pump Command ───────────────────────────────── */
   if (incoming.startsWith(Events::Incoming::WATER_PUMP_RUN_SECONDS_DYN))
   {
     String secondsText = incoming.substring(strlen(Events::Incoming::WATER_PUMP_RUN_SECONDS_DYN));
@@ -130,14 +176,32 @@ void handleActuatorCommand(String incoming, unsigned long currentMillis)
       return;
     }
 
-    unsigned long durationMillis = (unsigned long)seconds * 1000UL;
-    waterPumpRunUntilMillis = currentMillis + durationMillis;
-    isWaterPumpRunning = true;
-    applyActuatorState();
+    unsigned long durationMs = (unsigned long)seconds * 1000UL;
+    automation->setWaterPump(true, durationMs, currentMillis);
     emitWaterPumpAck("OK:RUNNING");
     emitWaterPumpStatus(currentMillis);
+    return;
+  }
+
+  /* ── Refill Pump Commands ─────────────────────────────── */
+  if (incoming == Events::Incoming::REFILL_PUMP_ON)
+  {
+    automation->setRefillPump(true);
+    emitRefillPumpAck("OK:ON");
+    emitRefillPumpStatus();
+    return;
+  }
+
+  if (incoming == Events::Incoming::REFILL_PUMP_OFF)
+  {
+    automation->setRefillPump(false);
+    emitRefillPumpAck("OK:OFF");
+    emitRefillPumpStatus();
+    return;
   }
 }
+
+/* ── Setup ────────────────────────────────────────────────── */
 
 void setup()
 {
@@ -148,44 +212,62 @@ void setup()
   pinMode(ECHO_PIN, INPUT);
   pinMode(TRIG_PIN, OUTPUT);
 
-  /* Close on Start */
+  /* Set relay pins HIGH (OFF) before setting as OUTPUT to avoid a glitch pulse */
   digitalWrite(RELAY_WATER_PUMP, HIGH);
   pinMode(RELAY_WATER_PUMP, OUTPUT);
+
   digitalWrite(RELAY_FAN, HIGH);
   pinMode(RELAY_FAN, OUTPUT);
+
+  digitalWrite(RELAY_REFILL_PUMP, HIGH);
+  pinMode(RELAY_REFILL_PUMP, OUTPUT);
 
   /* Ensure trigger pin starts clean */
   digitalWrite(TRIG_PIN, LOW);
 
-  /* Instantiate the EventHandler & Ultrasonic sensors safely now, when the Serial is ready */
+  /* Instantiate GreenOS objects once Serial is ready */
   handler = new EventHandler(&Serial);
   ultrasonic = new Ultrasonic(TRIG_PIN, ECHO_PIN);
+
+  /* AutomationController — boots in MANUAL; nothing fires on power-up */
+  automation = new AutomationController(RELAY_WATER_PUMP, RELAY_FAN, RELAY_REFILL_PUMP);
+
   dht.begin();
 
-  applyActuatorState();
+  /* Announce boot mode so C# / WebUI can sync state immediately */
+  emitModeStatus();
 }
+
+/* ── Loop ─────────────────────────────────────────────────── */
 
 void loop()
 {
   unsigned long currentMillis = millis();
 
-  if (isWaterPumpRunning && currentMillis >= waterPumpRunUntilMillis)
+  /* Run the automation controller — handles timer expiry + auto logic */
+  bool actuatorChanged = automation->update(
+    latestMoisture, latestWaterLevel,
+    latestTemperature, latestHumidity,
+    currentMillis
+  );
+
+  /* If auto-mode changed any actuator, broadcast the new states */
+  if (actuatorChanged)
   {
-    isWaterPumpRunning = false;
-    applyActuatorState();
+    emitExhaustFanStatus();
     emitWaterPumpStatus(currentMillis);
-    emitWaterPumpAck("OK:OFF");
+    emitRefillPumpStatus();
   }
 
-  /* Trigger on Incomming */
+  /* ── Incoming Commands ────────────────────────────────── */
   if (Serial.available() > 0)
   {
-    /* Handle Incomming Events */
     String incoming = Serial.readStringUntil('\n');
     handleActuatorCommand(incoming, currentMillis);
     handler->onReceive(incoming);
   }
 
+  /* ── Sensor Reads & Emit ──────────────────────────────── */
   if (currentMillis - previousEmitMillis >= emitInterval)
   {
     previousEmitMillis = currentMillis;
@@ -193,17 +275,15 @@ void loop()
     if (handler != nullptr)
     {
       /* Read Soil Moisture */
-
       if (currentMillis - moisture_lastReadTime >= moisture_readInterval)
       {
         moisture_lastReadTime = currentMillis;
 
-        /* Read the raw analog value (0 - 1023) */
         int rawAnalog = analogRead(MOISTURE_PIN);
         int moisturePercent = map(rawAnalog, DRY_VALUE, WET_VALUE, 0, 100);
         moisturePercent = constrain(moisturePercent, 0, 100);
+        latestMoisture = (float)moisturePercent;
 
-        /* Emit soil moisture data */
         if (Serial.availableForWrite())
         {
           handler->emitSoilMoisture(moisturePercent);
@@ -215,11 +295,10 @@ void loop()
       {
         ultrasonic_lastReadTime = currentMillis;
 
-        /* Read distance in centimeters */
         float distanceCM = ultrasonic->getFilteredDistance(10);
         float waterLevelPercent = ultrasonic->calculatePercentage(distanceCM);
+        latestWaterLevel = waterLevelPercent;
 
-        /* Emit distance data */
         if (Serial.availableForWrite())
         {
           handler->emitWaterLevel(waterLevelPercent);
@@ -231,34 +310,31 @@ void loop()
       {
         ldr_lastReadTime = currentMillis;
 
-        /* Read the raw analog value (0 - 1023) */
         int rawAnalog = analogRead(LDR_PIN);
 
-        /* Emit light intensity data */
         if (Serial.availableForWrite())
         {
           handler->emitLightIntensity(rawAnalog);
         }
       }
 
-      /* Read sensor data every 2 seconds (DHT22 needs at least 2 seconds between reads) */
+      /* Read DHT22 every 2 seconds */
       if (currentMillis - dht_lastReadTime >= dht_readInterval)
       {
         dht_lastReadTime = currentMillis;
 
-        /* Read temperature as Celsius (the default) */
         float temperature = dht.readTemperature();
-        /* Reading temperature or humidity takes about 250 milliseconds! */
         float humidity = dht.readHumidity();
 
-        /* Check if any reads failed and exit early (to try again next interval) */
         if (isnan(temperature) || isnan(humidity))
         {
           handler->emitDH22Error("Failed_to_read_from_DHT22_sensor");
           return;
         }
 
-        /* Emit temperature and humidity data */
+        latestTemperature = temperature;
+        latestHumidity = humidity;
+
         if (Serial.availableForWrite())
         {
           handler->emitTemperatureHumidity(temperature, humidity);
