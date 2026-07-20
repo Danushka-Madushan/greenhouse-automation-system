@@ -39,9 +39,9 @@ namespace GreenOS
     static constexpr float AUTO_HUM_RECOVER = 70.0f;     // % — turn fan OFF (hysteresis)
 
     /* ── Cooldown Durations ─────────────────────────────── */
-    static constexpr unsigned long WATER_PUMP_DURATION_MS = 5000UL;  // pump run time in AUTO
-    static constexpr unsigned long WATER_PUMP_COOLDOWN_MS = 60000UL; // 60 s between auto triggers
-    static constexpr unsigned long FAN_COOLDOWN_MS = 30000UL;        // 30 s between auto toggles
+    static constexpr unsigned long WATER_PUMP_DURATION_MS = 3000UL;  // pump run time in AUTO
+    static constexpr unsigned long WATER_PUMP_COOLDOWN_MS = 30000UL; // 30 s between auto triggers
+    static constexpr unsigned long FAN_COOLDOWN_MS = 10000UL;        // 10 s between auto toggles
 
     /* ── Constructor ────────────────────────────────────── */
     AutomationController(int pinWaterPump, int pinFan, int pinRefillPump);
