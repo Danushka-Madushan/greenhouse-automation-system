@@ -31,7 +31,7 @@ namespace GreenOS
   public:
     /* ── Automation Thresholds ──────────────────────────── */
     static constexpr float AUTO_MOISTURE_LOW = 30.0f;    // % — trigger water pump
-    static constexpr float AUTO_WATER_TANK_LOW = 20.0f;  // % — activate refill pump
+    static constexpr float AUTO_WATER_TANK_LOW = 25.0f;  // % — activate refill pump
     static constexpr float AUTO_WATER_TANK_FULL = 80.0f; // % — deactivate refill pump
     static constexpr float AUTO_TEMP_HIGH = 32.0f;       // °C — turn fan ON
     static constexpr float AUTO_TEMP_RECOVER = 28.0f;    // °C — turn fan OFF (hysteresis)
