@@ -52,7 +52,7 @@ export const WaterTankLevel = ({ level, capacity }: WaterTankLevelProps) => {
   const d = displayLevel
   const currentVolume = Math.round((d / 100) * capacity)
 
-  const isLow = d < 20
+  const isLow = d < 30
   const isNearFull = d > 90
 
   const waterColors = isLow
